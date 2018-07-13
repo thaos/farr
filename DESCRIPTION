@@ -1,7 +1,8 @@
 Package: farr
 Title: Computation of the Fraction of Attributable Risk for Records
 Version: 0.0.0.9000
-Authors@R: person("First", "Last", email = "first.last@example.com", role = c("aut", "cre"))
+Authors@R: c(person("Philippe", "Naveau", email = "philippe.naveau@lsce.ipsl.fr", role = c("aut")),
+             person("Soulivanh", "Thao", email = "soulivanh.thao@lsce.ipsl.fr", role = c("aut", "cre")))
 Description: This package provides methods to compute 
     the Fraction of Attributable Risk for Records as described in 
     Naveau, P., Ribes, A., Zwiers, F., Hannart, A., Tuel, A., & Yiou, P.
