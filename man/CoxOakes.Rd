@@ -29,6 +29,6 @@ J. Clim., 2018.}, \url{https://doi.org/10.1175/JCLI-D-16-0752.1}
 }
 \examples{
 set.seed(1)
-x <- rexp(100)
+x <- rexp(1000)
 CoxOakes(x)
 }
