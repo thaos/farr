@@ -175,9 +175,9 @@ vcov.farrfit_emp <- function(object, ...){
 #' for different return periods \code{rp}
 #'
 #' This function returns bootstrap non-parametric estimates of far, the fraction of attributable risk for records,
-#' as defined in Naveau et al (2018).The far is estimate from the bootstrap samples of the data x and z
+#' as defined in Naveau et al (2018).The far is estimated from the bootstrap samples of the data x and z
 #' that are obtained by resampling bootstrap.
-#' The first bootstrap sample is obtained from the original dataset of x and z.
+#' The first bootstrap sample corresponds to the original dataset of x and z.
 #'
 #' For the full reference, see : \emph{Naveau, P., Ribes, A., Zwiers, F., Hannart, A., Tuel, A., & Yiou, P.
 #' Revising return periods for record events in a climate event attribution context.

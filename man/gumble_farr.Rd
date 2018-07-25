@@ -10,7 +10,7 @@
 \alias{gumble_lim}
 \alias{frechet_lim}
 \alias{weibull_lim}
-\title{Theoretical far and FAR for three types of changes in a GEV distribution}
+\title{Theoretical far and FAR for three types of GEV distributions}
 \usage{
 gumble_farr(r, mu)
 
@@ -42,11 +42,11 @@ weibull_lim(sigma, xi)
 \item{u}{the thresholds for which the FAR is to be estimated.}
 }
 \description{
-A set of functions to return the theoretical far and the theorecial FAR in 3 specific cases when X and Z
-follow a GEV distribution.
+A set of functions to return the theoretical far and the theorecial FAR
+in 3 specific cases when X and Z follow a GEV distribution.
 }
 \details{
-These functions (\code{gumble_farr}, \code{frechet_farr}, \code{weibull_farr}, 
+These functions (\code{gumble_farr}, \code{frechet_farr}, \code{weibull_farr},
 \code{gumble_FAR}, \code{frechet_FAR}, \code{weibull_FAR})
 return the theoretical far and the FAR in 3 specific cases when X and Z
 follow a GEV distribution. The three specific cases described in Naveau et al. (2018) are :
@@ -58,7 +58,7 @@ follow a GEV distribution. The three specific cases described in Naveau et al. (
   \item X ~ Weibull with cdf G(x) = exp[-max(0, 1 + xi * x)^(-1 / xi)]
    with x real, mu >= 0  and Z = mu + sigma * X
 }
-For these three cases, the limits of the far and the FAR coincide when the return period \code{r} grows to 
+For these three cases, the limits of the far and the FAR coincide when the return period \code{r} grows to
 infinity and when the threshold \code{u} move towards the upper support bound of the distribution.
 The functions \code{gumble_lim}, \code{frechet_lim} and \code{weibull_lim} compute those limits.
 
@@ -70,9 +70,9 @@ J. Clim., 2018.}, \url{https://doi.org/10.1175/JCLI-D-16-0752.1}
  library(evd)
  # sample size
  # size <- 100
- 
- # Gumbel 
- # Z = muDelta + X 
+
+ # Gumbel
+ # Z = muDelta + X
  # x = rgev(size, loc = 0, scale = 1, shape = 0)
  # z = rgev(size, loc = muDelta, scale = 1, shape = 0)
  muG <-  0; sigmaG <-  1; xiG = 0 ; muDelta = 0.5
@@ -92,8 +92,8 @@ J. Clim., 2018.}, \url{https://doi.org/10.1175/JCLI-D-16-0752.1}
  plot(u, gFAR, ylim = ylim, main = "FAR theoretical value")
  abline(h = glim)
 
- # Frechet 
- # Z = sigmaDelta * X 
+ # Frechet
+ # Z = sigmaDelta * X
  # x = rgev(size, loc = 1, scale = xiF, shape = xiF)
  # z = rgev(size, loc = sigmaDelta, scale = xiF * sigmaDelta, shape = xiF)
  muF <-  1; sigmaF <- xiF <- .15 ; sigmaDelta <-  1.412538
@@ -112,10 +112,10 @@ J. Clim., 2018.}, \url{https://doi.org/10.1175/JCLI-D-16-0752.1}
  abline(h = flim)
  plot(u, fFAR, ylim = ylim, main = "FAR theoretical value")
  abline(h = flim)
- 
- # Weibull 
- # Z = muDelta + sigmaDelta * X 
- # x = rgev(size, loc = 0, scale = 1, shape = xiF)
+
+ # Weibull
+ # Z = muDelta + sigmaDelta * X
+ # x = rgev(size, loc = 0, scale = 1, shape = xiW)
  # z = rgev(size, loc = muDelta, scale =  sigmaDelta, shape = xiW)
  muW <-  0 ; sigmaW <- 1 ; xiW <- -0.05;
  sigmaDelta <-  1.1 ; muDelta <- (1 - sigmaDelta) / (-xiW)

@@ -17,7 +17,7 @@ boot_theta_fit.wexp(x, z, B = 100)
 An a list containing the following
 elements:
 \describe{
-  \item{theta_boot}{a vector with the estimations of theta for each 
+  \item{theta_boot}{a vector with the estimates of theta for each
   bootstrap sample}
   \item{xboot}{a list where each element contains the bootstrap sample for x}
   \item{zboot}{a list where each element contains the bootstrap sample for z}
@@ -25,14 +25,15 @@ elements:
 }
 \description{
 \code{estim_theta.wexp} returns a list which contains
-the bootstrap estimation of theta assuming W ~ exp(theta).
+the bootstrap estimates of theta assuming W ~ exp(theta).
 }
 \details{
-This function returns bootstrap estimations of theta as defined in Naveau et al (2018) that is used 
-to estimate the far, the fraction of attributable risk for records. This estimation is made assuming that W = - log(G(Z)) follows an 
+This function returns bootstrap estimates of theta as defined in Naveau et al (2018) that is used
+to estimate the far, the fraction of attributable risk for records (with \code{\link{boot_farr_fit.wexp}}).
+This estimation is made assuming that W = - log(G(Z)) follows an
 exponentional distribution: W ~ exp(theta). G denotes the Cumulative Distribution Function of
-the counterfactual variable X. The bootstrap samples of theta are obtained by resampling bootstrap. 
-The first bootrtrap sample is obtained frome the original datset of x and y.
+the counterfactual variable X. The bootstrap samples of theta are obtained by resampling bootstrap.
+The first bootrtrap sample corresponds to the original dataset of x and y.
 
 For the full reference, see : \emph{Naveau, P., Ribes, A., Zwiers, F., Hannart, A., Tuel, A., & Yiou, P.
 Revising return periods for record events in a climate event attribution context.
@@ -40,7 +41,7 @@ J. Clim., 2018.}, \url{https://doi.org/10.1175/JCLI-D-16-0752.1}
 }
 \examples{
  library(evd)
- 
+
  muF <-  1; xiF <- .15; sigmaF <-  1.412538 #  cst^(-xiF) # .05^(-xi1);
  # asymptotic limit for the far in this case with a Frechet distributiom
  boundFrechet <- frechet_lim(sigma = sigmaF, xi = xiF)
@@ -50,14 +51,14 @@ J. Clim., 2018.}, \url{https://doi.org/10.1175/JCLI-D-16-0752.1}
  set.seed(4)
  z = rgev(size, loc = (sigmaF), scale = xiF * sigmaF, shape = xiF)
  x = rgev(length(z), loc=(1), scale = xiF, shape=xiF)
- 
+
  rp = seq(from = 2, to = 30, length = 200)
  # Resampling bootstrap for the estimation of the far assuming an exponential distribution for theta
  theta_boot.exp <- boot_theta_fit.wexp(x = x, z = z, B = 10)
- 
+
  # Estimate the far from the bootstrap samples of theta
  boot_farr.exp <- boot_farr_fit.wexp(theta_boot = theta_boot.exp$theta_boot , rp = rp)
- confint(boot_farr.exp) 
+ confint(boot_farr.exp)
  print(boot_farr.exp)
  ylim <- range(boundFrechet, boot_farr.exp)
  plot(boot_farr.exp, ylim = ylim, main = "boot far exponential")

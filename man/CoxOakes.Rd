@@ -22,10 +22,6 @@ A list containing the following components:
 \details{
 This function performs the test of exponentiallity of Cox and Oakes.
 For more details, see: Henze and Meintanis (2005, Metrika)
-
-For the full reference, see : \emph{Naveau, P., Ribes, A., Zwiers, F., Hannart, A., Tuel, A., & Yiou, P.
-Revising return periods for record events in a climate event attribution context.
-J. Clim., 2018.}, \url{https://doi.org/10.1175/JCLI-D-16-0752.1}
 }
 \examples{
 set.seed(1)

@@ -9,37 +9,37 @@
 }
 \arguments{
 \item{object}{an object with the class \code{boot_FARfit}. It is a matrix containing
-the bootstrap samples of the far. Each line of this matrix represent the estimated far for 
+the bootstrap samples of the far. Each line of this matrix represent the estimated far for
 different thresholds \code{u} and colum corresponds to a differents bootstrap samples of the
 data.}
 
 \item{parm}{a vector of thresholds for which to compute the confidence interval for the FAR.
 The thresholds have to be selected from the one present in \code{rownames(object)}.}
 
-\item{level}{a numerical value between 0 and 1 corresponding to the confidence level 
+\item{level}{a numerical value between 0 and 1 corresponding to the confidence level
 of the confidence intervals.}
 
 \item{...}{not used.}
 }
 \value{
 A two-column matrix that contains the confidence interval
-for the FAR computed empirically from the bootstrap estimations of the FAR.
-The first colum is for the lower bound of the confidence interval and the second one
-for the upper bound. Each line of the matrix represents the condidence interval for a 
+for the FAR computed empirically from the bootstrap estimates of the FAR.
+The first column is for the lower bound of the confidence interval and the second one
+for the upper bound. Each line of the matrix represents the condidence interval for a
 different threshold \code{u}
 }
 \description{
 \code{confint.boot_FARfit} returns an matrix that contains the confidence interval
-for the far computed empirically from the bootstrap estimations of the far
+for the far computed empirically from the bootstrap estimates of the far
 for different exceedance thresholds \code{u}
 }
 \details{
 This function returns a two-column matrix that contains the confidence intervals
-for the FAR computed empirically from the bootstrap estimations of the FAR.
+for the FAR computed empirically from the bootstrap estimates of the FAR.
 }
 \examples{
  library(evd)
- 
+
  muF <-  1; xiF <- .15; sigmaF <-  1.412538 #  cst^(-xiF) # .05^(-xi1);
  # asymptotic limit for the far in this case with a Frechet distributiom
  boundFrechet <- frechet_lim(sigma = sigmaF, xi = xiF)
@@ -49,7 +49,7 @@ for the FAR computed empirically from the bootstrap estimations of the FAR.
  set.seed(4)
  z = rgev(size, loc = (sigmaF), scale = xiF * sigmaF, shape = xiF)
  x = rgev(length(z), loc=(1), scale = xiF, shape=xiF)
- 
+
  rp = seq(from = 2, to = 30, length = 200)
  u  = qgev(1 - (1 / rp),loc = muF, scale = xiF, shape = xiF)
 
@@ -57,7 +57,7 @@ for the FAR computed empirically from the bootstrap estimations of the FAR.
  boot_FAR.emp <- boot_FAR_fit.emp(x = x, z = z, u = u, B = 10)
  print(boot_FAR.emp)
  confint(boot_FAR.emp)
- 
+
  ylim <- range(boundFrechet, boot_FAR.emp)
  plot(boot_FAR.emp, ylim = ylim, main = "boot FAR empirical")
  # Theoretical FAR for in this case (Z = sigmaF * X  with X ~ Frechet)

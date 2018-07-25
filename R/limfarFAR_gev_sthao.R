@@ -1,7 +1,7 @@
-#' Theoretical far and FAR for three types of changes in a GEV distribution
+#' Theoretical far and FAR for three types of GEV distributions
 #'
-#' A set of functions to return the theoretical far and the theorecial FAR in 3 specific cases when X and Z
-#' follow a GEV distribution.
+#' A set of functions to return the theoretical far and the theorecial FAR
+#' in 3 specific cases when X and Z follow a GEV distribution.
 #'
 #' These functions (\code{gumble_farr}, \code{frechet_farr}, \code{weibull_farr},
 #' \code{gumble_FAR}, \code{frechet_FAR}, \code{weibull_FAR})

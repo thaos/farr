@@ -16,7 +16,7 @@ estim_FAR.emp <- function(x, z, u){
 #' where events are defined in terms of a threshold exceendance.
 #' The FAR is estimate from the bootstrap samples of the data x and z
 #' that are obtained by resampling bootstrap.
-#' The first bootstrap sample is obtained from the original dataset of x and y.
+#' The first bootstrap sample corresponds to the original dataset of x and y.
 #'
 #' @param x the variable of interest in the counterfactual world.
 #' @param z the variable of interest in the factual world.
@@ -91,7 +91,7 @@ boot_FAR_fit.emp <- function(x, z , u, B = 100){
 #'
 #' @return A two-column matrix that contains the confidence interval
 #' for the FAR computed empirically from the bootstrap estimates of the FAR.
-#' The first colum is for the lower bound of the confidence interval and the second one
+#' The first column is for the lower bound of the confidence interval and the second one
 #' for the upper bound. Each line of the matrix represents the condidence interval for a
 #' different threshold \code{u}
 #'
@@ -181,8 +181,8 @@ plot.FARfit <-function(x, ...){
                        col = col, border=F)
   args_polygon <- c(args_polygon, ellipsis)
   do.call(polygon, args_polygon)
-  args_lines <- list(x =  rp,
-                     y = farr,
+  args_lines <- list(x =  u,
+                     y = FAR,
                      col = "black")
   args_lines <- c(args_lines, ellipsis)
   do.call(lines, args_lines)

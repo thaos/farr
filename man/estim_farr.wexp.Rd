@@ -13,15 +13,14 @@ estim_farr.wexp(theta_hat, sigma_theta_hat, rp)
 \method{plot}{farrfit}(x, ...)
 }
 \arguments{
-\item{theta_hat}{a vector of the estimated theta for different return period \code{rp}.
-The estimation of theta is made assuming W ~ exp(theta). 
+\item{theta_hat}{the value of the estimated theta.
+The estimation of theta is made assuming W ~ exp(theta).
 This vector is provided by the function \code{\link{estim_theta.wexp}}}
 
-\item{sigma_theta_hat}{a vector with the estimated standard devitation of \code{theta_hat}
+\item{sigma_theta_hat}{the value the estimated standard devitation of \code{theta_hat}
 this vector is provided by the function \code{\link{estim_theta.wexp}}}
 
-\item{rp}{the return periods for which \code{theta_hat} and  \code{signa_theta_hat}
-are provided.}
+\item{rp}{the return periods for which the far is to be estimated.}
 
 \item{x}{an  object of class (\code{"farfit"})}
 
@@ -32,7 +31,7 @@ An object of class \code{("farrfit_wexp", "farrfit")}. It is a list containing t
 elements:
 \describe{
   \item{rp}{the return periods for which the far is to be estimated.}
-  \item{farr_hat}{the estimation of the far for each return period \code{rp}}
+  \item{farr_hat}{the estimated far for each return period \code{rp}}
   \item{sigma__hat}{the standard deviation of the estimator of the far
   assuming asymptotic gaussianity and obtained via the delta-method from \code{sigma_theta_hat}}
 }
@@ -42,8 +41,8 @@ elements:
 the results of the estimation of the far assuming W ~ exp(theta).
 }
 \details{
-This function returns an estimation of the far, the fraction of attributable risk for records,
-as defined in Naveau et al (2018). This estimation is made assuming that W = - log(G(Z)) follows an 
+This function returns an estimate of the far, the fraction of attributable risk for records,
+as defined in Naveau et al (2018). This estimation is made assuming that W = - log(G(Z)) follows an
 exponentional distribution: W ~ exp(theta). G denotes the Cumulative Distribution Function of
 the counterfactual variable X.
 
@@ -53,7 +52,7 @@ J. Clim., 2018.}, \url{https://doi.org/10.1175/JCLI-D-16-0752.1}
 }
 \examples{
  library(evd)
- 
+
  muF <-  1; xiF <- .15; sigmaF <-  1.412538 #  cst^(-xiF) # .05^(-xi1);
  # asymptotic limit for the far in this case with a Frechet distributiom
  boundFrechet <- frechet_lim(sigma = sigmaF, xi = xiF)
@@ -63,7 +62,7 @@ J. Clim., 2018.}, \url{https://doi.org/10.1175/JCLI-D-16-0752.1}
  set.seed(4)
  z = rgev(size, loc = (sigmaF), scale = xiF * sigmaF, shape = xiF)
  x = rgev(length(z), loc=(1), scale = xiF, shape=xiF)
- 
+
  rp = seq(from = 2, to = 30, length = 200)
  # parametric estimation of far with exponential distribution for theta
  theta_fit <- estim_theta.wexp(x = x, z = z)
@@ -71,15 +70,15 @@ J. Clim., 2018.}, \url{https://doi.org/10.1175/JCLI-D-16-0752.1}
  hist(theta_fit)
  ecdf(theta_fit)
  qqplot(theta_fit)
- 
+
  # Estimate the far
  farr_fit.exp <- estim_farr.wexp(theta_hat = theta_fit$theta_hat,
-  sigma_theta_hat = theta_fit$sigma_theta_hat, 
-  rp = rp) 
+  sigma_theta_hat = theta_fit$sigma_theta_hat,
+  rp = rp)
  print(farr_fit.exp)
  ylim <- range(boundFrechet, farr_fit.exp$farr_hat)
  plot(farr_fit.exp, ylim = ylim, main = "far exponential")
  # Theoretical for in this case (Z = sigmaF * X  with X ~ Frechet)
 lines(rp, frechet_farr(r = rp, sigma = sigmaF, xi = xiF), col = "red", lty = 2)
- abline(h = boundFrechet, col = "red", lty = 2) 
+ abline(h = boundFrechet, col = "red", lty = 2)
 }

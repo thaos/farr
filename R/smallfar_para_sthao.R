@@ -59,13 +59,14 @@ jitter_dat <- function(x, jitter){
   return(x)
 }
 
-#' Parametric estimation of theta under W ~ exp(theta)
+#' Parametric estimation of theta under H0: W ~ exp(theta)
 #'
 #' \code{estim_theta.wexp} returns an object of class  \code{("thetafit_wexp", "thetafit")} which contains
 #' the results of the estimation of theta and of the fit of W ~ exp(theta).
 #'
 #' This function returns an estimate of theta as defined in Naveau et al (2018) that is used
-#' to estimate the far, the fraction of attributable risk for records. This estimation is made assuming that W = - log(G(Z)) follows an
+#' to estimate the far, the fraction of attributable risk for records (with \code{\link{estim_farr.wexp}}).
+#' This estimation is made assuming that W = - log(G(Z)) follows an
 #' exponentional distribution: W ~ exp(theta). G denotes the Cumulative Distribution Function of
 #' the counterfactual variable X.
 #'
@@ -456,10 +457,11 @@ ecdf.thetafit_wexp <- function(x, ...){
 #' the bootstrap estimates of theta assuming W ~ exp(theta).
 #'
 #' This function returns bootstrap estimates of theta as defined in Naveau et al (2018) that is used
-#' to estimate the far, the fraction of attributable risk for records. This estimation is made assuming that W = - log(G(Z)) follows an
+#' to estimate the far, the fraction of attributable risk for records (with \code{\link{boot_farr_fit.wexp}}).
+#' This estimation is made assuming that W = - log(G(Z)) follows an
 #' exponentional distribution: W ~ exp(theta). G denotes the Cumulative Distribution Function of
 #' the counterfactual variable X. The bootstrap samples of theta are obtained by resampling bootstrap.
-#' The first bootrtrap sample is obtained frome the original datset of x and y.
+#' The first bootrtrap sample corresponds to the original dataset of x and y.
 #'
 #' For the full reference, see : \emph{Naveau, P., Ribes, A., Zwiers, F., Hannart, A., Tuel, A., & Yiou, P.
 #' Revising return periods for record events in a climate event attribution context.
@@ -528,7 +530,7 @@ boot_theta_fit.wexp <- function(x, z , B = 100){
 #' exponentional distribution: W ~ exp(theta). G denotes the Cumulative Distribution Function of
 #' the counterfactual variable X. The far is estimate from the bootstrap samples of theta
 #' that are obtained by resampling bootstrap.
-#' The first bootrtrap sample is obtained from the original dataset of x and y.
+#' The first bootrtrap sample corresponds to the original dataset of x and y.
 #'
 #' For the full reference, see : \emph{Naveau, P., Ribes, A., Zwiers, F., Hannart, A., Tuel, A., & Yiou, P.
 #' Revising return periods for record events in a climate event attribution context.

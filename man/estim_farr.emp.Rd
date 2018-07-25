@@ -17,8 +17,8 @@ estim_farr.emp(x, z, rp)
 An object of class \code{("farrfit_emp", "farrfit")}. It is a list containing the following
 elements:
 \describe{
-  \item{rp}{the return periods for which the far is to be estimated.}
-  \item{farr_hat}{the estimation of the far for each return period \code{rp}}
+  \item{rp}{the return periods for which the far is estimated.}
+  \item{farr_hat}{the estimate of the far for each return period \code{rp}}
   \item{sigma_farr_hat}{the standard deviation of the estimator of the far
   assuming asymptotic gaussianity}.
 }
@@ -28,7 +28,7 @@ elements:
 the results of the non-parametric estimation of the far.
 }
 \details{
-This function returns an non-parametric estimation of the far, the fraction of attributable risk for records,
+This function returns an non-parametric estimate of the far, the fraction of attributable risk for records,
 as defined in Naveau et al (2018).
 
 For the full reference, see : \emph{Naveau, P., Ribes, A., Zwiers, F., Hannart, A., Tuel, A., & Yiou, P.
@@ -37,7 +37,7 @@ J. Clim., 2018.}, \url{https://doi.org/10.1175/JCLI-D-16-0752.1}
 }
 \examples{
  library(evd)
- 
+
  muF <-  1; xiF <- .15; sigmaF <-  1.412538 #  cst^(-xiF) # .05^(-xi1);
  # asymptotic limit for the farr in this case with a Frechet distributiom
  boundFrechet <- frechet_lim(sigma = sigmaF, xi = xiF)
@@ -47,7 +47,7 @@ J. Clim., 2018.}, \url{https://doi.org/10.1175/JCLI-D-16-0752.1}
  set.seed(4)
  z = rgev(size, loc = (sigmaF), scale = xiF * sigmaF, shape = xiF)
  x = rgev(length(z), loc=(1), scale = xiF, shape=xiF)
- 
+
  rp = seq(from = 2, to = 30, length = 200)
  # non-parametric estimation of far
  farr_fit.emp <- estim_farr.emp(x = x, z = z, rp = rp)
@@ -56,5 +56,5 @@ J. Clim., 2018.}, \url{https://doi.org/10.1175/JCLI-D-16-0752.1}
  plot(farr_fit.emp, ylim = ylim, main = "far empirical")
  # Theoretical for in this case (Z = sigmaF * X  with X ~ Frechet)
  lines(rp, frechet_farr(r = rp, sigma = sigmaF, xi = xiF), col = "red", lty = 2)
- abline(h = boundFrechet, col = "red", lty = 2) 
+ abline(h = boundFrechet, col = "red", lty = 2)
 }

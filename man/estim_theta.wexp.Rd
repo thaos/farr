@@ -5,7 +5,7 @@
 \alias{hist.thetafit_wexp}
 \alias{qqplot.thetafit_wexp}
 \alias{ecdf.thetafit_wexp}
-\title{Parametric estimation of theta under W ~ exp(theta)}
+\title{Parametric estimation of theta under H0: W ~ exp(theta)}
 \usage{
 estim_theta.wexp(x, z)
 
@@ -26,10 +26,10 @@ estim_theta.wexp(x, z)
 An object of class \code{("thetafit_wexp", "thetafit")}. It is a list containing the following
 elements:
 \describe{
-  \item{theta_hat}{the estimation of theta}
+  \item{theta_hat}{the estimate of theta}
   \item{sigma_theta_hat}{the standard deviation of the estimator of theta
   assuming asymptotic gaussianity and obtained via the delta-method}
-  \item{W}{the estimation of W}
+  \item{W}{the estimate of W}
   \item{co_test}{the result of the Cox and Oakes test
   to test whether W follows an exponential distribution}
 }
@@ -39,8 +39,9 @@ elements:
 the results of the estimation of theta and of the fit of W ~ exp(theta).
 }
 \details{
-This function returns an estimation of theta as defined in Naveau et al (2018) that is used 
-to estimate the far, the fraction of attributable risk for records. This estimation is made assuming that W = - log(G(Z)) follows an 
+This function returns an estimate of theta as defined in Naveau et al (2018) that is used
+to estimate the far, the fraction of attributable risk for records (with \code{\link{estim_farr.wexp}}).
+This estimation is made assuming that W = - log(G(Z)) follows an
 exponentional distribution: W ~ exp(theta). G denotes the Cumulative Distribution Function of
 the counterfactual variable X.
 
@@ -50,7 +51,7 @@ J. Clim., 2018.}, \url{https://doi.org/10.1175/JCLI-D-16-0752.1}
 }
 \examples{
  library(evd)
- 
+
  muF <-  1; xiF <- .15; sigmaF <-  1.412538 #  cst^(-xiF) # .05^(-xi1);
  # asymptotic limit for the far in this case with a Frechet distributiom
  boundFrechet <- frechet_lim(sigma = sigmaF, xi = xiF)
@@ -60,7 +61,7 @@ J. Clim., 2018.}, \url{https://doi.org/10.1175/JCLI-D-16-0752.1}
  set.seed(4)
  z = rgev(size, loc = (sigmaF), scale = xiF * sigmaF, shape = xiF)
  x = rgev(length(z), loc=(1), scale = xiF, shape=xiF)
- 
+
  rp = seq(from = 2, to = 30, length = 200)
  # parametric estimation of far with exponential distribution for theta
  theta_fit <- estim_theta.wexp(x = x, z = z)
@@ -68,11 +69,11 @@ J. Clim., 2018.}, \url{https://doi.org/10.1175/JCLI-D-16-0752.1}
  hist(theta_fit)
  ecdf(theta_fit)
  qqplot(theta_fit)
- 
+
  # Estimate the far
  farr_fit.exp <- estim_farr.wexp(theta_hat = theta_fit$theta_hat,
   sigma_theta_hat = theta_fit$sigma_theta_hat,
-   rp = rp) 
+   rp = rp)
  print(farr_fit.exp)
  ylim <- range(boundFrechet, farr_fit.exp$farr_hat)
  plot(farr_fit.exp, ylim = ylim, main = "far exponential")

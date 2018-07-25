@@ -30,19 +30,19 @@ for a given bootstrap sample.
 }
 \description{
 \code{boot_FAR_fit.emp} returns an object of class \code{("boot_FARfit.emp", "boot_FARfit", "FARfit")}
-which contains the estimations of the FAR for each bootstrap sample and
+which contains the estimates of the FAR for each bootstrap sample and
 for different return periods \code{rp}
 }
 \details{
-This function returns bootstrap empirical estimations of FAR, the fraction of attributable risk
+This function returns bootstrap empirical estimates of FAR, the fraction of attributable risk
 where events are defined in terms of a threshold exceendance.
 The FAR is estimate from the bootstrap samples of the data x and z
-that are obtained by resampling bootstrap. 
-The first bootstrap sample is obtained from the original dataset of x and y.
+that are obtained by resampling bootstrap.
+The first bootstrap sample corresponds to the original dataset of x and y.
 }
 \examples{
  library(evd)
- 
+
  muF <-  1; xiF <- .15; sigmaF <-  1.412538 #  cst^(-xiF) # .05^(-xi1);
  # asymptotic limit for the far in this case with a Frechet distributiom
  boundFrechet <- 1 - sigmaF^(-1/xiF)
@@ -52,7 +52,7 @@ The first bootstrap sample is obtained from the original dataset of x and y.
  set.seed(4)
  z = rgev(size, loc = (sigmaF), scale = xiF * sigmaF, shape = xiF)
  x = rgev(length(z), loc=(1), scale = xiF, shape=xiF)
- 
+
  rp = seq(from = 2, to = 30, length = 200)
  u  = qgev(1 - (1 / rp),loc = muF, scale = xiF, shape = xiF)
 
@@ -60,7 +60,7 @@ The first bootstrap sample is obtained from the original dataset of x and y.
  boot_FAR.emp <- boot_FAR_fit.emp(x = x, z = z, u = u, B = 10)
  print(boot_FAR.emp)
  confint(boot_FAR.emp)
- 
+
  ylim <- range(boundFrechet, boot_FAR.emp)
  plot(boot_FAR.emp, ylim = ylim, main = "boot FAR empirical")
  # Theoretical FAR for in this case (Z = sigmaF * X  with X ~ Frechet)
