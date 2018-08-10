@@ -97,7 +97,7 @@ non_para_farr <- function(p1_r_df){
 
 #' Non-parametric estimation of the far
 #'
-#' \code{estim_farr.emp} returns an object of class  \code{("farrfit_emp", "farrfit")} which contains
+#' \code{estim_farr.np} returns an object of class  \code{("farrfit_np", "farrfit")} which contains
 #' the results of the non-parametric estimation of the far.
 #'
 #' This function returns an non-parametric estimate of the far, the fraction of attributable risk for records,
@@ -111,7 +111,7 @@ non_para_farr <- function(p1_r_df){
 #' @param z the variable of interest in the factual world.
 #' @param rp the return periods for which the far is to be estimated.
 #'
-#' @return An object of class \code{("farrfit_emp", "farrfit")}. It is a list containing the following
+#' @return An object of class \code{("farrfit_np", "farrfit")}. It is a list containing the following
 #' elements:
 #' \describe{
 #'   \item{rp}{the return periods for which the far is estimated.}
@@ -135,30 +135,30 @@ non_para_farr <- function(p1_r_df){
 #'
 #'  rp = seq(from = 2, to = 30, length = 200)
 #'  # non-parametric estimation of far
-#'  farr_fit.emp <- estim_farr.emp(x = x, z = z, rp = rp)
-#'  print(farr_fit.emp)
-#'  ylim <- range(boundFrechet, farr_fit.emp$farr_hat)
-#'  plot(farr_fit.emp, ylim = ylim, main = "far empirical")
+#'  farr_fit.np <- estim_farr.np(x = x, z = z, rp = rp)
+#'  print(farr_fit.np)
+#'  ylim <- range(boundFrechet, farr_fit.np$farr_hat)
+#'  plot(farr_fit.np, ylim = ylim, main = "far empirical")
 #'  # Theoretical for in this case (Z = sigmaF * X  with X ~ Frechet)
 #'  lines(rp, frechet_farr(r = rp, sigma = sigmaF, xi = xiF), col = "red", lty = 2)
 #'  abline(h = boundFrechet, col = "red", lty = 2)
 #' @export
-estim_farr.emp  <- function(x, z, rp){
+estim_farr.np  <- function(x, z, rp){
   p1_r_df <- non_para_pr(x = x, z = z, rp = rp)
   farr_r_df <- non_para_farr(p1_r_df = p1_r_df)
-  class(farr_r_df) <- c("farrfit_emp", "farrfit")
+  class(farr_r_df) <- c("farrfit_np", "farrfit")
   farr_r_df
 }
 
 #' @export
-coef.farrfit_emp <- function(object, ...){
+coef.farrfit_np <- function(object, ...){
   coef <- object$farr_hat
   names(coef) <- names(object$farr_hat)
   return(coef)
 }
 
 #' @export
-vcov.farrfit_emp <- function(object, ...){
+vcov.farrfit_np <- function(object, ...){
   if(length(object$sigma_farr_hat) == 1){
     vcov <- matrix(object$sigma_farr_hat, nrow = 1, ncol = 1)
   } else{
@@ -170,7 +170,7 @@ vcov.farrfit_emp <- function(object, ...){
 
 #' Non-parametric estimation of the far from bootstrap samples
 #'
-#' \code{boot_farr_fit.emp} returns an object of class \code{("boot_farrfit.emp", "boot_farrfit", "farrfit")}
+#' \code{boot_farr_fit.np} returns an object of class \code{("boot_farrfit.np", "boot_farrfit", "farrfit")}
 #' which contains the estimates of the far for each bootstrap sample and
 #' for different return periods \code{rp}
 #'
@@ -188,7 +188,7 @@ vcov.farrfit_emp <- function(object, ...){
 #' @param rp the return periods for which the far is to be estimated.
 #' @param B the number of bootstrap samples to draw.
 #'
-#' @return An object of class \code{("boot_farrfit.emp", "boot_farrfit", "farrfit")}.
+#' @return An object of class \code{("boot_farrfit.np", "boot_farrfit", "farrfit")}.
 #' It is a matrix where each columm contains the far estimated for the returns periods \code{rp}
 #' for a given bootstrap sample.
 #'
@@ -208,27 +208,27 @@ vcov.farrfit_emp <- function(object, ...){
 #'  rp = seq(from = 2, to = 30, length = 200)
 #'
 #'  # Resampling bootstrap for the non-parametrc estimation of the far
-#'  boot_farr.emp <- boot_farr_fit.emp(x = x, z = z, rp = rp, B = 10)
-#'  print(boot_farr.emp)
-#'  confint(boot_farr.emp)
+#'  boot_farr.np <- boot_farr_fit.np(x = x, z = z, rp = rp, B = 10)
+#'  print(boot_farr.np)
+#'  confint(boot_farr.np)
 #'
-#'  ylim <- range(boundFrechet, boot_farr.emp)
-#'  plot(boot_farr.emp, ylim = ylim, main = "boot far non-parametric")
+#'  ylim <- range(boundFrechet, boot_farr.np)
+#'  plot(boot_farr.np, ylim = ylim, main = "boot far non-parametric")
 #'  # Theoretical far for in this case (Z = sigmaF * X  with X ~ Frechet)
 #'  lines(rp, frechet_farr(r = rp, sigma = sigmaF, xi = xiF), col = "red", lty = 2)
 #'  abline(h = boundFrechet, col = "red", lty = 2)
 #' @export
-boot_farr_fit.emp <- function(x, z , rp, B = 100){
+boot_farr_fit.np <- function(x, z , rp, B = 100){
   xboot <- lapply(seq.int(B), function(b) sample(x, length(x), replace = TRUE))
   zboot <- lapply(seq.int(B), function(b) sample(z, length(z), replace = TRUE))
   xboot[[1]] <- x
   zboot[[1]] <- z
   farr_boot <- mapply(FUN = function(x, z){
-    farr_fit <- estim_farr.emp(x = x, z = z, rp = rp)
+    farr_fit <- estim_farr.np(x = x, z = z, rp = rp)
     return(farr_fit$farr_hat)
     }, xboot, zboot, SIMPLIFY = TRUE)
   dimnames(farr_boot) <- list(rp = rp, B = seq.int(B))
-  class(farr_boot) <- c("boot_farrfit.emp", "boot_farrfit", "farrfit")
+  class(farr_boot) <- c("boot_farrfit.np", "boot_farrfit", "farrfit")
   return(farr_boot)
 }
 

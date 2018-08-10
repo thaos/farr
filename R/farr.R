@@ -2,7 +2,7 @@
 #'
 #' The \code{farr} package provides a set of functions to estimate
 #' the fraction of attributable risk for record events, see for instance
-#' \code{\link{estim_farr.emp}} and \code{\link{estim_farr.wexp}}.
+#' \code{\link{estim_farr.np}} and \code{\link{estim_farr.wexp}}.
 #'
 #' For a full description of the method, see:
 #' \emph{VNaveau, P., Ribes, A., Zwiers, F., Hannart, A., Tuel, A., & Yiou, P.
