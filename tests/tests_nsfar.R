@@ -7,15 +7,15 @@ devtools::load_all()
 set.seed(1)
 
 # sample size
-size <-  250 * 40
+size <-  250 * 4
 
 
 # Gumbel
 # Simulations
 rp <- 50
 t <- seq.int(size)/size
-mu = (seq(0, 2, length.out = size))^2
-x = rgev(size * 4, loc = 0, scale = 1, shape = 0)
+mu = 2 + exp(-seq(0, 2, length.out = size))
+x = rgev(size * 5, loc = 0, scale = 1, shape = 0)
 z = rgev(size, loc = mu, scale = 1, shape = 0)
 theta_theo <- 1 / exp(mu)
 p12_theo <- 1 / (1 + theta_theo)
@@ -28,16 +28,9 @@ kernel_gauss <- function(x, h = 1){
 attr(kernel_gauss, "K2_integrated") <-  1 / (2 * sqrt(pi))
 
 kernel_epanechnikov <- function(x, h = 1){
-  3/7 * (1 - (x/h)^2) / h
+  pmax(3/4 * (1 - (x/h)^2) / h, 0)
 }
 attr(kernel_epanechnikov, "K2_integrated") <-  3/5
-
-
-dmat <- t %>% matrix(ncol = 1) %>%
-  dist(method = "euclidian") %>%
-  as.matrix()
-
-kmat <- apply(dmat, 2, kernel_gauss, h = 25)
 
 
 estim_p12 <- function(x, t, z, kernel, h = length(t)^(-1/5)){
@@ -48,16 +41,18 @@ estim_p12 <- function(x, t, z, kernel, h = length(t)^(-1/5)){
     as.matrix()
   kmat <- apply(dmat, 2, kernel_gauss, h = h)
   Gm <- ecdf(x)
-  # Gm <- G_theo
   GmZ <- Gm(z)
   p12 <- apply(kmat, 2, function(weight){
     weighted.mean(GmZ, weight)
   })
+  # p13 <- apply(kmat, 2, function(weight){
+  #   weighted.mean(GmZ^2, weight)
+  # })
   sig2 <- apply(kmat, 2, function(weight){
     weighted.mean((p12 - GmZ)^2, weight)
   })
-  print(summary((1/m * p12 + (1 - 1/m) * sig2 ) / sig2))
-  sig2 <- 1/m * p12 + (1 - 1/m) * sig2
+  # print(summary((1/m * p12 + (1 - 1/m) * sig2 ) / sig2))
+  # var_rh <- 1/m * p12 + (1 - 1/m) * p12^
   # K22 <- integrate(function(x) kernel(x)^2, lower = -Inf, upper = Inf)$value
   if( !is.null(attr(kernel, "K2_integrated"))){
     K22 <- attr(kernel, "K2_integrated")
@@ -66,6 +61,7 @@ estim_p12 <- function(x, t, z, kernel, h = length(t)^(-1/5)){
   }
   ft <- apply(kmat, 2, mean)
   p12_var <- 1/(n * h) * sig2/ft * K22
+  p12_var <-  p12_var + 1/(n * m * h) * p12 * (1 - p12)
   list(p12hat = p12, p12hat_sd = sqrt(p12_var), GmZ = GmZ)
 }
 p12 <- estim_p12(x = x, t = t, z = z, kernel = kernel_gauss, h = length(t)^(-1/5)/5)
@@ -246,8 +242,8 @@ choose_h_for_wexp <- function(x = x, t = t, z = z,
   optimize(ftomin, lower = 0, upper = max(t),
            tol = .Machine$double.eps^(1/10))
 }
-h_chosen <- choose_h_for_wexp(x = x, t = t, z = z,
-                  kernel = kernel_epanechnikov)
+hchosen <- choose_h_for_wexp(x = x, t = t, z = z,
+                  kernel = kernel_epanechnikov)$minimum
 p12 <- estim_p12(x = x, t = t, z = z, kernel = kernel_epanechnikov, h = h_chosen$minimum)
 with(p12, plot(t, GmZ))
 with(p12, lines(t, p12hat, lty = 2))
@@ -260,34 +256,134 @@ cv_loo_h <- function(x = x, t = t, z = z,
   dmat <- t %>% matrix(ncol = 1) %>%
     dist(method = "euclidian") %>%
     as.matrix()
-  kmat <- apply(dmat, 2, kernel_gauss, h = h)
+  kmat <- apply(dmat, 2, kernel, h = h)
   Gm <- ecdf(x)
   GmZ <- Gm(z)
   ft <- apply(kmat, 2, mean)
+  p12 <- apply(kmat, 2, function(weight){
+    weighted.mean(GmZ, weight)
+  })
+  sig2 <- apply(kmat, 2, function(weight){
+    weighted.mean((p12 - GmZ)^2, weight)
+  })
   compute_res2_i <- function(i){
     p12i <- weighted.mean(GmZ[-i], w = kmat[-i, i])
     e2i <- (GmZ[i] - p12i)^2
+    # e2i <- abs(GmZ[i] - p12i)
   }
   e2 <- vapply(seq_along(t),
                FUN = compute_res2_i,
                FUN.VALUE = numeric(1))
-  cvh <- weighted.mean(e2, ft)
+  cvh <- weighted.mean(e2, w = ft)
   return(cvh)
 }
-htotest <- seq(.Machine$double.eps, max(t), by = length(t)^(-1/5)/10)
+htotest <- seq(.Machine$double.eps, max(t)/3, by = length(t)^(-1/5)/30)[-1]
+krnl <- kernel_epanechnikov
+krnl <- kernel_gauss
 cv <- sapply(htotest,
-        cv_loo_h, x = x, t = t, z = z,
-       kernel = kernel_epanechnikov)
+             cv_loo_h, x = x, t = t, z = z,
+             kernel = krnl)
 plot(htotest, cv)
 hchosen <- htotest[which.min(cv)]
-hchosen <- optimize(cv_loo_h, interval = range(htotest),
-                    x = x, t = t, z = z,
-                    kernel = kernel_epanechnikov)$minimum
+# hchosen <- optimize(cv_loo_h, interval = range(htotest),
+                    # x = x, t = t, z = z,
+                    # kernel = krnl)$minimum
 
-p12 <- estim_p12(x = x, t = t, z = z, kernel = kernel_epanechnikov, h = hchosen)
+p12 <- estim_p12(x = x, t = t, z = z, kernel = krnl, h = hchosen)
 with(p12, plot(t, GmZ, pch = 20, col = "lightgrey"))
 with(p12, lines(t, p12hat, lty = 2))
 with(p12, lines(t, p12hat + 1.96 * p12hat_sd))
 with(p12, lines(t, p12hat - 1.96 * p12hat_sd))
 lines(t, p12_theo, col = "red")
 
+boot_p12 <- function(x, t, z, kernel = kernel_epanechnikov, h = length(t)^(-1/5), nboot = 100){
+  xboot <- lapply(seq.int(nboot), function(i) sample(x = x, replace = TRUE))
+  xboot[[1]] <- x
+  n <- length(t)
+  itboot <- lapply(seq.int(nboot), function(i){
+    sample.int(n,
+               size = n,
+               replace = TRUE)
+  })
+  tboot <- lapply(itboot, function(it) t[it])
+  tboot[[1]] <- t
+  zboot <- lapply(itboot, function(it) z[it])
+  zboot[[1]] <- z
+  mapply(function(x, t, z){
+    dmat <- c(t, tboot[[1]]) %>% matrix(ncol = 1) %>%
+      dist(method = "euclidian") %>%
+      as.matrix()
+    dmat <- dmat[1:n, (n+1):(2*n)]
+    kmat <- apply(dmat, 2, kernel_gauss, h = h)
+    Gm <- ecdf(x)
+    GmZ <- Gm(z)
+    p12 <- apply(kmat, 2, function(weight){
+      weighted.mean(GmZ, weight)
+    })
+    return(p12)
+  }, x = xboot, t = tboot, z = zboot)
+}
+p12boot <- boot_p12(x = x, t = t, z = z,
+                    kernel = krnl, h = hchosen,
+                    nboot = 500)
+plot(t, p12$GmZ, pch = 20, col = "lightgrey")
+lines(t, apply(p12boot, 1, mean), lwd = 1, lty = 2)
+lines(t, apply(p12boot, 1, quantile, probs = 0.975), lwd = 1, lty = 1)
+lines(t, apply(p12boot, 1, quantile, probs = 0.025), lwd = 1, lty = 1)
+lines(t, p12_theo, col = "red", lwd = 1)
+
+boot_theta <- function(p12boot){
+  1/p12boot - 1
+}
+thetaboot <- boot_theta(p12boot = p12boot)
+thetaboot_ci025 <- apply(thetaboot, 1, quantile, probs = 0.025)
+thetaboot_ci975 <- apply(thetaboot, 1, quantile, probs = 0.975)
+xylim <- with(theta,
+              range(theta_theo,
+                    thetaboot_ci025,
+                    thetaboot_ci975)
+)
+with(theta, plot(theta_theo, apply(thetaboot, 1, mean),
+                 type = "l", lty = 2,
+                 xlim = xylim, ylim = xylim))
+with(theta, lines(theta_theo, thetahat + 1.96 * thetahat_sd))
+with(theta, lines(theta_theo, thetahat - 1.96 * thetahat_sd))
+abline(a = 0, b = 1, col = "red")
+
+W <- -log(farr::estim_GZ.kernel(x, z))
+theta <- with(p12, estim_theta(p12hat = p12hat, p12hat_sd = p12hat_sd))
+theta <- estim_theta(p12hat = apply(p12boot, 1, mean), p12hat_sd = apply(p12boot, 1, sd))
+W_normalized <- normalize_W(W, theta$thetahat)
+W_normalized <- replace_zeros(W_normalized)
+hist(W_normalized, breaks = 100, freq = FALSE)
+lines(seq(0,10, 0.01), dexp(seq(0, 10, 0.01)))
+farr::CoxOakes(x = W_normalized)
+
+tref <- runif(1)
+
+drawBBNW <- function(tref){
+  size <- 10000
+  h = length(t)^(-1/5)/5
+  t <- runif(size)
+  mu = 2 + exp(t)
+  # x = rgev(size * 5, loc = 0, scale = 1, shape = 0)
+  z = rgev(size, loc = mu, scale = 1, shape = 0)
+  # GmZ <- ecdf(x)(z)
+  GZ <- pgev(z, loc = 0, scale = 1, shape = 0)
+  GZ_sorted <- c(0, sort(GZ), 1)
+  GZ_diff <- diff(GZ_sorted)
+  W <- cumsum(rnorm(length(GZ_diff), sd = sqrt(GZ_diff)))
+  W1 <- tail(W, 1)
+  GZ_sorted <- GZ_sorted[-1]
+  BGZ_sorted <- W - GZ_sorted * W1
+  BGZ <- BGZ_sorted[-length(BGZ_sorted)]
+  BGZ[order(GZ)] <- BGZ
+  Kh <- kernel_gauss(sqrt((t-tref)^2), h = h)
+  mean(Kh * BGZ)
+}
+
+samples_BBNW <- sapply(1:1000, function(i) drawBBNW(tref = tref))
+hist(samples_BBNW, breaks = 100)
+plot(density(samples_BBNW))
+summary(samples_BBNW)
+ks.test(samples_BBNW, "pnorm", mean = 0, sd = sd(samples_BBNW))
