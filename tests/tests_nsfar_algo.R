@@ -203,7 +203,7 @@ estim_farr.nswexp <- function(object, rp){
 
 extract_rp <- function(object, rp){
   irp <- which(object$rp %in% rp)
-  farr_fit <- list(t = object,
+  farr_fit <- list(t = object$t,
                    rp = object$rp[irp],
                    farr_hat = object$farr_hat[, irp, drop = FALSE],
                    sigma_farr_hat = object$sigma_farr_hat[, irp, drop = FALSE],
@@ -284,14 +284,21 @@ plot.farrfitns_wexp <- function(x, plot_ci = TRUE, ...){
   farr <- farr[it_unique]
   farr_ci_ordered <- confint(x)[order_t,,, drop = FALSE]
   farr_ci_ordered <- farr_ci_ordered[it_unique,,, drop = FALSE]
-  tmat <- matrix(rep(t_unique, length(rp)),
+  tmat <- matrix(rep(t_ordered, length(rp)),
+                 nrow = length(t_ordered),
+                 ncol = length(rp))
+  rpmat <- matrix(rep(rp, length(t_ordered)),
+                  nrow = length(t_ordered),
+                  ncol = length(rp),
+                  byrow = TRUE)
+  tmat_unique <- matrix(rep(t_unique, length(rp)),
                  nrow = length(t_unique),
                  ncol = length(rp))
-  rpmat <- matrix(rep(rp, length(t_unique)),
+  rpmat_unique <- matrix(rep(rp, length(t_unique)),
                   nrow = length(t_unique),
                   ncol = length(rp),
                   byrow = TRUE)
-  rpmat_col <- cut(rpmat, breaks = seq(min(rp)-0.1, max(rp + .1), length.out = length(rp) + 1))
+  rpmat_col <- cut(rpmat_unique, breaks = seq(min(rp)-0.1, max(rp + .1), length.out = length(rp) + 1))
   rp_col <- cut(rp, breaks = seq(min(rp)-0.1, max(rp + .1), length.out = length(rp) + 1))
   itime <- sapply(seq.int(length(t_unique)-1),
                   function(i){
@@ -311,14 +318,20 @@ plot.farrfitns_wexp <- function(x, plot_ci = TRUE, ...){
                  z = farr_quads3d,
                  col = rainbow(length(rp))[rp_col[irp]], alpha = 0.3)
   }
-  rgl::plot3d(tmat, rpmat, farr,
+  rgl::plot3d(tmat_unique, rpmat_unique, farr,
               col = rainbow(length(rp))[rpmat_col],
               xlab = "t", ylab = "rp", zlab = "far")
   if(plot_ci){
     sapply(seq_along(rp), ciband_byrp)
   }
   if(length(rp) == 1){
-    rgl::points3d(tmat, rpmat, (1 - (1/x$GmZ - 1)) * (1 - 1/max(rpmat)))
+    farr_points <- (1 - (1/x$GmZ - 1)) * (1 - 1/max(rpmat))
+    farr_points[is.infinite(farr_points)] <- NA
+    #     farr_points[farr_points <  min(farr_ci_ordered)  * 1.2] <- NA
+    #     farr_points[farr_points >  max(farr_ci_ordered) * 1.2] <- NA
+    farr_points[farr_points <  -0.5] <- NA
+    farr_points[farr_points >  1.2] <- NA
+    rgl::points3d(tmat, rpmat, farr_points)
     rgl::grid3d(c("y+"))
     rgl::aspect3d(1, 1, 0.75)
   } else{
