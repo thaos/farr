@@ -130,6 +130,8 @@ estim_theta.wexp <- function(x, z){
   z <- jitter_dat(z, rounding)
   x <- jitter_dat(x, rounding)
   n <- length(z)
+
+
   #
   # Creating W = - log(Ghat(Z)) with Ghat(Z)= average(K(Z-X_i)) for the kernel based on the arctan
   #
@@ -374,14 +376,14 @@ hist.thetafit_wexp <- function(x, ...){
   hist(W,
        freq = F,
        xlab = "W = -log(G(Z))",
-       xlim = c(0, max(W)),
+       xlim = c(0, max(W_normalized)),
        main = "Exponential fit for W",
        breaks = max(9, length(W)/10),
        col="lightgray"
   )
   grid(lwd = 3)
   box()
-  xx <- seq(from = 0, to = max(W), length=200)
+  xx <- seq(from = 0, to = max(W_normalized), length=200)
   lines(xx, dexp(xx, rate = 1/x$theta_hat), col="darkblue", lwd=3, lty=2)
 }
 

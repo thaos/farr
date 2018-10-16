@@ -14,11 +14,10 @@ attr(kernel_epanechnikov, "K2_integrated") <-  3/5
 estim_p12_ns <- function(x, t, z, kernel, h = length(t)^(-1/5)){
   n <- length(t)
   m <- length(x)
-  t_unique <- sort(unique(t)) 
-  dmat <- c(t, t_unique) %>% matrix(ncol = 1) %>%
+  t_unique <- sort(unique(t))
+  dmat <- t %>% matrix(ncol = 1) %>%
     dist(method = "euclidian") %>%
-    as.matrix() # %>%
-    # "["(seq_along(t), (length(t) + 1) : (length(t) + length(t_unique)))
+    as.matrix()
   kmat <- apply(dmat, 2, kernel_gauss, h = h)
   Gm <- ecdf(x)
   GmZ <- Gm(z)
@@ -36,19 +35,20 @@ estim_p12_ns <- function(x, t, z, kernel, h = length(t)^(-1/5)){
   ft <- apply(kmat, 2, mean)
   p12_var <- 1/(n * h) * sig2/ft * K22
   # p12_var <-  p12_var + 1/(n * m * h) * p12 * (1 - p12)
-  minGmZ <-  outer(GmZ, GmZ, pmin)
-  prodGmZ <- outer(GmZ, GmZ, "*")
-  BGmZ_var <- apply(kmat, 2, function(Kj){
-    prodKj <- outer(Kj, Kj, "*")
-    sum(prodKj * (minGmZ - prodGmZ))
-  })
-  BGmZ_var <- BGmZ_var/ ft^2 /(m * n^2)
-  BGmZ_var <- BGmZ_var/ (m * n^2)
-  p12_var <- p12_var + BGmZ_var
+  ## Part of Brownian Bridge
+  # minGmZ <-  outer(GmZ, GmZ, pmin)
+  # prodGmZ <- outer(GmZ, GmZ, "*")
+  # BGmZ_var <- apply(kmat, 2, function(Kj){
+  #   prodKj <- outer(Kj, Kj, "*")
+  #   sum(prodKj * (minGmZ - prodGmZ))
+  # })
+  # BGmZ_var <- BGmZ_var/ ft^2 /(m * n^2)
+  # BGmZ_var <- BGmZ_var/ (m * n^2)
+  # p12_var <- p12_var + BGmZ_var
   list(p12_hat = p12, sigma_p12_hat = sqrt(p12_var), GmZ = GmZ)
 }
 
-estim_theta_ns <-function(p12_hat, sigma_p12_hat) {
+estim_theta_ns <- function(p12_hat, sigma_p12_hat) {
   theta_hat <- 1/p12_hat - 1
   var_theta_hat <- sigma_p12_hat^2 / p12_hat^4
   list(theta_hat = theta_hat, sigma_theta_hat = sqrt(var_theta_hat))
@@ -64,13 +64,14 @@ estim_theta.nswexp <- function(x, t, z, kernel, h = NULL){
   x <- jitter_dat(x, rounding)
   if(is.null(h)){
     # Leave-One-Out Cross-Validation
-    h <- optimize(cv_loo_h,
-                  interval = c(
-                    min(diff(sort(t))),
-                    abs(diff(range(t)))
-                  ),
-                  x = x, t = t, z = z,
-                  kernel = kernel)$minimum
+        h <- optimize(cv_loo_h,
+                      interval = c(
+                        min(diff(sort(t))),
+                        abs(diff(range(t)))
+                      ),
+                      x = x, t = t, z = z,
+                      kernel = kernel)$minimum
+    # h <- choose_h_for_wexp(x = x, t = t, z = z, kernel = kernel)$minimum
   }
   p12 <- estim_p12_ns(x = x, t = t, z = z, kernel = kernel, h = h)
   theta <- estim_theta_ns(p12_hat = p12$p12_hat, sigma_p12_hat = p12$sigma_p12_hat)
@@ -82,7 +83,7 @@ estim_theta.nswexp <- function(x, t, z, kernel, h = NULL){
   # Cox and Oakes Test for the exponential distribution
   co_test <- farr::CoxOakes(x = W_normalized)
   names(theta$theta_hat) <- paste("theta_t", t, sep = "_")
-  theta_fit <- list(t = t, theta_hat = theta$theta_hat, sigma_theta_hat = theta$sigma_theta_hat, GmZ = p12$GmZ, W = W, co_test = co_test)
+  theta_fit <- list(x = x, t = t, z = z, theta_hat = theta$theta_hat, sigma_theta_hat = theta$sigma_theta_hat, GmZ = p12$GmZ, W = W, co_test = co_test, kernel = kernel, h = h)
   class(theta_fit) <- c("thetafitns_wexp")
   return(theta_fit)
 }
@@ -202,6 +203,10 @@ estim_farr.nswexp <- function(object, rp){
 }
 
 extract_rp <- function(object, rp){
+  UseMethod("extract_rp", object)
+}
+
+extract_rp.farrfitns_wexp <- function(object, rp){
   irp <- which(object$rp %in% rp)
   farr_fit <- list(t = object$t,
                    rp = object$rp[irp],
@@ -209,6 +214,19 @@ extract_rp <- function(object, rp){
                    sigma_farr_hat = object$sigma_farr_hat[, irp, drop = FALSE],
                    GmZ = object$GmZ)
   class(farr_fit) <- c("farrfitns_wexp")
+  return(farr_fit)
+}
+
+extract_rp.boot_farrfitns_wexp <- function(object, rp){
+  irp <- which(object$rp %in% rp)
+  farr_fit <- list(t = object$t,
+                   rp = object$rp[irp],
+                   farr_boot = object$farr_boot[, irp,, drop = FALSE],
+                   theta_boot = object$theta_boot,
+                   xboot = object$xboot,
+                   tboot = object$tboot,
+                   zboot = object$zboot)
+  class(farr_fit) <- class(object)
   return(farr_fit)
 }
 
@@ -253,7 +271,7 @@ get_rp.farrfitns_wexp <- function(object, ...){
 }
 
 get_t <- function(object, ...){
-  UseMethod("get_t")
+  UseMethod("get_t", object)
 }
 
 get_t.farrfitns_wexp <- function(object, ...){
@@ -272,6 +290,18 @@ get_farr.boot_farrfitns_wexp <- function(object, ...){
   apply(object$farr_boot, 1:2, mean)
 }
 
+get_GmZ <- function(object, ...){
+  UseMethod("get_GmZ", object)
+}
+
+get_GmZ.farrfitns_wexp <- function(object, ...){
+  object$GmZ
+}
+
+get_GmZ.boot_farrfitns_wexp <- function(object, ...){
+  ecdf(object$xboot[[1]])(object$zboot[[1]])
+}
+
 plot.farrfitns_wexp <- function(x, plot_ci = TRUE, ...){
   rp <- get_rp(x)
   order_t <- get_t(x) %>% order()
@@ -280,8 +310,8 @@ plot.farrfitns_wexp <- function(x, plot_ci = TRUE, ...){
   it_unique  <- vapply(t_unique,
                        FUN = function(x) min(which(x == t_ordered)),
                        FUN.VALUE = 1)
-  farr <- get_farr(x)[order_t]
-  farr <- farr[it_unique]
+  farr <- get_farr(x)[order_t,, drop = FALSE]
+  farr <- farr[it_unique,, drop = FALSE]
   farr_ci_ordered <- confint(x)[order_t,,, drop = FALSE]
   farr_ci_ordered <- farr_ci_ordered[it_unique,,, drop = FALSE]
   tmat <- matrix(rep(t_ordered, length(rp)),
@@ -337,6 +367,93 @@ plot.farrfitns_wexp <- function(x, plot_ci = TRUE, ...){
   } else{
     rgl::grid3d(c("x", "y+", "z"))
   }
+}
+
+plot.farrfitns_wexp <- function(x, plot_ci = TRUE, ...){
+  ellipsis <- list(...)
+  if(is.null(ellipsis$level)){
+    ellipsis$level  <-  0.95
+  }
+  rp <- get_rp(x)
+  order_t <- get_t(x) %>% order()
+  t_ordered <- get_t(x)[order_t]
+  t_unique <- unique(t_ordered)
+  it_unique  <- vapply(t_unique,
+                       FUN = function(x) min(which(x == t_ordered)),
+                       FUN.VALUE = 1)
+  farr <- get_farr(x)[order_t,, drop = FALSE]
+  farr <- farr[it_unique,, drop = FALSE]
+  farr_ci_ordered <- confint(x, level = ellipsis$level)[order_t,,, drop = FALSE]
+  farr_ci_ordered <- farr_ci_ordered[it_unique,,, drop = FALSE]
+  if(is.null(ellipsis$ylim)){
+    ellipsis$ylim <- range(farr,  farr_ci_ordered, na.rm = TRUE)
+  }
+  tmat <- matrix(rep(t_ordered, length(rp)),
+                 nrow = length(t_ordered),
+                 ncol = length(rp))
+  rpmat <- matrix(rep(rp, length(t_ordered)),
+                  nrow = length(t_ordered),
+                  ncol = length(rp),
+                  byrow = TRUE)
+  tmat_unique <- matrix(rep(t_unique, length(rp)),
+                 nrow = length(t_unique),
+                 ncol = length(rp))
+  rpmat_unique <- matrix(rep(rp, length(t_unique)),
+                  nrow = length(t_unique),
+                  ncol = length(rp),
+                  byrow = TRUE)
+  rp_col <- cut(rp, breaks = seq(min(rp)-0.1, max(rp + .1), length.out = length(rp) + 1))
+  ciband_byrp <- function(irp){
+    x <- c(t_unique, rev(t_unique))
+    y <- c(farr_ci_ordered[, irp, 1],
+           rev(farr_ci_ordered[, irp, 2]))
+    col <- rainbow(length(rp))[rp_col[irp]] %>%
+      # makeTransparent(alpha = 50)
+      adjustcolor(alpha.f=0.2)
+    polygon(x = x,  y = y, col = col, border = FALSE)
+  }
+  plot_onerp <- function(irp){
+    if (is.null(ellipsis$main)) {
+      ellipsis$main  <-  "far_rp(t)"
+    }
+    plot(tmat_unique[, irp], farr[, irp],
+          type = "l", lwd = 2, lty = 1,
+          ylim = ellipsis$ylim,
+          col = rainbow(length(rp))[rp_col[irp]],
+          xlab = "t", ylab = "far",
+          main = ellipsis$main,
+          sub = paste("rp =", rp[irp], ", CI level =", ellipsis$level))
+    ciband_byrp(irp)
+    farr_points <- (1 - (1/get_GmZ(x) - 1)) * (1 - 1/rp[irp])
+    # points(tmat[, irp], farr_points)
+    grid()
+  }
+  compute_nrowncol <- function(rp){
+    lrp <- length(rp)
+    nrow <- floor(sqrt(length(rp)))
+    ncol <- ceiling(lrp / nrow)
+    c(nrow, ncol)
+  }
+  if(length(rp) > 1){
+    par(mfrow = compute_nrowncol(rp))
+  }
+  sapply(seq_along(rp),
+         function(irp){
+           plot_onerp(irp)
+         })
+}
+
+#note: always pass alpha on the 0-255 scale
+makeTransparent <- function(someColor, alpha=100){
+  newColor <- col2rgb(someColor)
+  apply(newColor, 2,
+        function(curcoldata){
+          rgb(red = curcoldata[1],
+              green = curcoldata[2],
+              blue = curcoldata[3],
+              alpha = alpha,
+              maxColorValue=255)
+        })
 }
 
 # Bootstrap estimation
@@ -471,7 +588,7 @@ choose_h_for_wexp <- function(x = x, t = t, z = z,
   }
   roughly <-  length(t)^(-1/5)
   optimize(ftomin, lower = 0, upper = max(t),
-           tol = .Machine$double.eps^(1/10))
+           tol = .Machine$double.eps^(1/100))
 }
 
 cv_loo_h <- function(x = x, t = t, z = z,
