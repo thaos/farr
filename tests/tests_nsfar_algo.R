@@ -59,31 +59,50 @@ estim_theta.nswexp <- function(x, t, z, kernel, h = NULL){
   #  x (counterfactual), z (factual), rp = return periods
 
   # rounding numbers to be added to discrete values of x and z
-  rounding=seq(from = -0.499, to= 0.499, length = 2 *  max(length(z), length(x)))
-  z <- jitter_dat(z, rounding)
-  x <- jitter_dat(x, rounding)
-  if(is.null(h)){
+  # rounding=seq(from = -0.499, to= 0.499, length = 2 *  max(length(z), length(x)))
+  # z <- jitter_dat(z, rounding)
+  # x <- jitter_dat(x, rounding)
+  if (is.null(h)) {
     # Leave-One-Out Cross-Validation
-        h <- optimize(cv_loo_h,
-                      interval = c(
-                        min(diff(sort(t))),
-                        abs(diff(range(t)))
-                      ),
-                      x = x, t = t, z = z,
-                      kernel = kernel)$minimum
+    # h <- optimize(cv_loo_h,
+    #               interval = c(
+    #                 min(diff(sort(t))),
+    #                 abs(diff(range(t)))
+    #               ),
+    #               x = x, t = t, z = z,
+    #               kernel = kernel)$minimum
+    t_sorted <- sort(unique(t))
+    h_totest <- seq(
+      min(diff(t_sorted)),
+      abs(diff(range(t))) / 4,
+      by = median(diff(t_sorted))
+    )
+    cv_score <- sapply(
+      h_totest,
+      cv_loo_h, x = x, t = t, z = z, kernel = kernel
+    )
+    h <- h_totest[which.min(cv_score)]
     # h <- choose_h_for_wexp(x = x, t = t, z = z, kernel = kernel)$minimum
   }
   p12 <- estim_p12_ns(x = x, t = t, z = z, kernel = kernel, h = h)
   theta <- estim_theta_ns(p12_hat = p12$p12_hat, sigma_p12_hat = p12$sigma_p12_hat)
 
   # Creating W = - log(Ghat(Z)) with Ghat(Z)= average(K(Z-X_i)) for the kernel based on the arctan
-  GZhat <- estim_GZ.kernel(x, z)
-  W <- estim_W(GZhat)
-  W_normalized <- normalize_W(W, theta$theta_hat) %>% replace_zeros()
+  # GZhat <- estim_GZ.kernel(x, z)
+  # GZhat <- estim_GZ.empirical(x, z)
+  # W <- estim_W(GZhat)
+  # W_normalized <- normalize_W(W, theta$theta_hat)
+  # W_normalized <- replace_zeros(W_normalized)
   # Cox and Oakes Test for the exponential distribution
-  co_test <- farr::CoxOakes(x = W_normalized)
+  # co_test <- farr::CoxOakes(x = W_normalized)
+  utest <- kstest_unif(x = x, z = z, theta = theta$theta_hat)
   names(theta$theta_hat) <- paste("theta_t", t, sep = "_")
-  theta_fit <- list(x = x, t = t, z = z, theta_hat = theta$theta_hat, sigma_theta_hat = theta$sigma_theta_hat, GmZ = p12$GmZ, W = W, co_test = co_test, kernel = kernel, h = h)
+  theta_fit <- list(x = x, t = t, z = z,
+                    theta_hat = theta$theta_hat,
+                    sigma_theta_hat = theta$sigma_theta_hat,
+                    GmZ = p12$GmZ,
+                    utest_pvalue = utest$p.value,
+                    kernel = kernel, h = h)
   class(theta_fit) <- c("thetafitns_wexp")
   return(theta_fit)
 }
@@ -108,57 +127,79 @@ hist.thetafitns_wexp <- function(x, ...){
   #
   # Checking (histogram) if -log(G(Z)) follows an exponentialdistribution
   #
-  W_normalized <- normalize_W(x$W, x$theta_hat) %>% replace_zeros()
-  hist(W_normalized,
+  GmZ <- x$GmZ
+  theta <- x$theta_hat
+  GmZ_trunc <- GmZ[!(GmZ <= 0 | GmZ >= 1)]
+  theta_trunc <- theta[!(GmZ <= 0 | GmZ >= 1)]
+  GmZ_normalized <- GmZ_trunc^(1/theta_trunc)
+  hist(GmZ_normalized,
        freq = F,
-       xlab = "W = -log(G(Z))",
-       xlim = c(0, max(W_normalized)),
-       main = "Exponential fit for W_normalized",
-       breaks = max(9, length(W_normalized)/10),
-       col="lightgray"
+       xlab = "Gm(Z)^(1/theta)",
+       xlim =  range(GmZ_normalized),
+       main = "Uniform fit for GmZ_normalized",
+       breaks = max(9, length(GmZ_normalized)/10),
+       col = "lightgray"
   )
   grid(lwd = 3)
   box()
-  xx <- seq(from = 0, to = max(W_normalized), length=200)
-  lines(xx, dexp(xx, rate = 1), col="darkblue", lwd=3, lty=2)
+  xx <- seq(from = 0, to = max(GmZ_normalized), length = 200)
+  lines(xx, dunif(xx, min = 0, max = 1), col = "darkblue", lwd = 3, lty = 2)
 }
 
 qqplot.thetafitns_wexp <- function(x, ...){
   #
   # Checking (qqplot) if -log(G(Z)) follows an exponentialdistribution
   #
-  W_normalized <- normalize_W(x$W, x$theta_hat) %>% replace_zeros()
-  ci90 <- confint(x)
-  W_normalized_sup <- normalize_W(x$W, ci90[, 1]) %>% replace_zeros()
-  W_normalized_inf <- normalize_W(x$W, ci90[, 2]) %>% replace_zeros()
-  ll <- length(W_normalized)
+  GmZ <- x$GmZ
+  theta <- x$theta_hat
+  GmZ_trunc <- GmZ[!(GmZ <= 0 | GmZ >= 1)]
+  theta_trunc <- theta[!(GmZ <= 0 | GmZ >= 1)]
+  GmZ_normalized <- GmZ_trunc^(1/theta_trunc)
+  ci90 <- confint(x)[!(GmZ <= 0 | GmZ >= 1), ]
+  GmZ_normalized_inf <- GmZ_trunc^(1/ci90[, 1])
+  GmZ_normalized_sup <- GmZ_trunc^(1/ci90[, 2])
+  ll <- length(GmZ_normalized)
   pp <- ((1:ll) - 0.5) / ll
-  expected <- qexp(pp, rate= 1)
-  observed = sort(W_normalized)
-  observed_sup = sort(W_normalized_sup)
-  observed_inf = sort(W_normalized_inf)
-  xylim <- range(expected, observed)
+  expected <- qunif(pp, min = 0, max = 1)
+  observed = sort(GmZ_normalized)
+  observed_sup = sort(GmZ_normalized_sup)
+  observed_inf = sort(GmZ_normalized_inf)
+  xylim <- range(
+    expected[is.finite(expected)],
+    observed[is.finite(observed)]
+  )
   plot(observed, expected,
        xlim = xylim, ylim = xylim,
        xlab = "Observed", ylab = "Expected",
-       main = "Exponential QQ plot for  W_normalized=-log(G(Z))",
-       col="darkblue", pch = 20, cex = 1)
+       main = "Uniform QQ plot for  GmZ_normalized=Gm(Z)^(1/theta)",
+       col = "darkblue", pch = 20, cex = 1)
   grid(lwd = 3)
   box()
-  polygon(c(observed_inf, observed_sup[ll:1]), c(expected, expected[ll:1]), col = rgb(red=0,green=.0,blue=.5,alpha=.3), border=F)
-  abline(a=0, b=1 , col="red", lwd=3)
-  points(observed, expected, col="darkblue", pch = 20, cex = 1)
+  polygon(
+    c(observed_inf, observed_sup[ll:1]),
+    c(expected, expected[ll:1]),
+    col = rgb(red = 0,green = .0, blue = .5, alpha = .3),
+    border = F
+  )
+  abline(a = 0, b = 1 , col = "red", lwd = 3)
+  points(observed, expected, col = "darkblue", pch = 20, cex = 1)
 }
 
 ecdf.thetafitns_wexp <- function(x, ...){
-  W_normalized <- normalize_W(x$W, x$theta_hat) %>% replace_zeros()
-  plot(ecdf(W_normalized),
-       xlab = "W_normalized = -log(G(Z))",
+  GmZ <- x$GmZ
+  theta <- x$theta_hat
+  GmZ_trunc <- GmZ[!(GmZ <= 0 | GmZ >= 1)]
+  theta_trunc <- theta[!(GmZ <= 0 | GmZ >= 1)]
+  GmZ_normalized <- GmZ_trunc^(1/theta_trunc)
+  xlim <- range(GmZ_normalized)
+  plot(ecdf(GmZ_normalized),
+       xlim = xlim,
+       xlab = "GmZ_normalized=Gm(Z)^(1/theta)",
        ylab = "",
        main = "Theoretical and Empirical CDFs", ...)
   grid(lwd = 3);box()
-  xx <- seq(from=0 , to=max(W_normalized), length=200)
-  lines(xx, pexp(xx, rate = 1), col = "darkgray", lwd = 4, lty = 2)
+  xx <- seq(from = 0 , to = xlim[2], length = 200)
+  lines(xx, punif(xx, min = 0, max = 1), col = "darkgray", lwd = 4, lty = 2)
 }
 
 plot.thetafitns_wexp <- function(x, ...){
@@ -504,7 +545,7 @@ boot_theta_fit.nswexp <- function(x, t, z,
        zboot = p12_boot$zboot)
 }
 
-boot_farr <-function(theta_boot, rp) {
+boot_farr <- function(theta_boot, rp) {
   if(length(rp) != 1) stop("length != 1")
   (1 - theta_boot) * (1 - 1/rp)
 }
@@ -614,7 +655,8 @@ cv_loo_h <- function(x = x, t = t, z = z,
   e2 <- vapply(seq_along(t),
                FUN = compute_res2_i,
                FUN.VALUE = numeric(1))
-  cvh <- weighted.mean(e2, w = ft)
+  # cvh <- weighted.mean(e2, w = ft)
+  cvh <- weighted.mean(e2, w = (GmZ > 0 & GmZ < 1))
   return(cvh)
 }
 
@@ -658,4 +700,53 @@ varempirical <- function(size){
   mean(apply(samples_BBNW, 2,  mean)^2)
 }
 
+gen_h0 <- function(x, z, theta){
+  x_h0 <- rgev(length(x), loc = 0, scale = 1, shape = 0)
+  z_h0 <- rgev(length(z), loc = -log(theta), scale = 1, shape = 0)
+  # z_h0 <- rgev(length(z), loc = mu, scale = 1, shape = 0)
+  # GZhat_h0 <- estim_GZ.kernel(x_h0, z_h0)
+  GZhat_h0 <- estim_GZ.empirical(x_h0, z_h0)
+  W_h0 <- estim_W(GZhat_h0)
+  # xfit_h0 <- fgev(x_h0)
+  # W_h0 <- with(xfit_h0, -log(pgev(z_h0, loc = estimate[1], scale = estimate[2], shape = estimate[3])))
+  # W_h0 <- -log(pgev(z_h0, loc = 0, scale = 1, shape = 0))
+  W_h0_normalized <- normalize_W(W_h0, theta)
+  # W_h0_normalized <- W_h0_normalized[W_h0_normalized > 0]
+  ks.test(W_h0_normalized, "pexp", rate = 1)$statistic
+}
 
+compute_exptest_pvalue <- function(x, z, theta, n_h0 = 100){
+  GZhat <- estim_GZ.empirical(x, z)
+  W <- estim_W(GZhat)
+  W_normalized <- normalize_W(W, theta)
+  dist_ks <- ks.test(W_normalized, "pexp", rate = 1)$statistic
+  dist_ks_h0 <- sapply(seq.int(n_h0), function(i) gen_h0(x, z, theta))
+  # hist(dist_ks_h0, breaks = 50)
+  # abline(v = dist_ks)
+  pvalue <- mean(dist_ks < dist_ks_h0)
+  return(pvalue)
+}
+
+## Tests that G(Z)^1/theta ~ Beta(1, 1) = U[0, 1]
+## Equivalent to testing that -log(G(Z))/theta ~ Exp(1)
+ptrunc_beta <- function(q, shape1, shape2, ncp = 0, lower.tail = TRUE, log.p = FALSE){
+  ptrunc(q, spec = "beta", a = 0, b = 1,
+         shape1 = shape1, shape2 = shape2,
+         ncp = ncp, lower.tail = lower.tail, log.p = log.p)
+}
+dtrunc_beta <- function(x, shape1, shape2, ncp = 0, log = FALSE){
+  dtrunc(x, spec = "beta", a = 0, b = 1,
+         shape1 = shape1, shape2 = shape2,
+         ncp = ncp, log = log)
+}
+kstest_unif <- function(x, z, theta){
+  GZhat <- estim_GZ.empirical(x, z)
+  # GZhat <- G_theo(z)
+  GZhat_trunc <- GZhat[!(GZhat <= 0 | GZhat >= 1)]
+  theta_trunc <- theta[!(GZhat <= 0 | GZhat >= 1)]
+  # hist(GZhat_trunc^(1/theta_theo_trunc), freq = FALSE, breaks = 50)
+  # xx <- seq(0, 1, 0.01)
+  # lines(xx, dtrunc_beta(xx, shape1 = 1, shape2 = 1))
+  ks.test(GZhat_trunc^(1/theta_trunc),"ptrunc_beta", 1, 1)
+  # ks.test(GZhat_trunc^(1/theta_trunc),"punif")
+}

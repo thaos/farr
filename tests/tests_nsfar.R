@@ -2,20 +2,39 @@
 library(evd)
 library(magrittr)
 library(devtools)
+library(truncdist)
 devtools::load_all()
 source("tests/tests_nsfar_algo.R")
 # RNG
 set.seed(1)
 
-# sample size
+
+##########################################################################
+# Example 2
+# Frechet
+# Simulations
 size <-  250 * 4
+rp <- 50
+t <- seq.int(size)/size
+sigma <- seq(1, 2, length.out = size)
+xi = 0.5
+x = rgev(size * 5, loc = 1, scale = xi, shape = xi)
+z = rgev(size, loc = sigma, scale = xi * sigma, shape = xi)
+theta_theo <- sigma^(-1 / xi)
+p12_theo <- 1 / (1 + theta_theo)
+G_theo <- function(z) pgev(z, loc = 1, scale = xi, shape = xi)
+far_theo_rp <- (1 - theta_theo) * (1 - 1/rp)
 
 
+##########################################################################
+# Example 1
 # Gumbel
 # Simulations
+size <-  250 * 4
 rp <- 50
 t <- seq.int(size)/size
 mu = 2 + exp(-seq(0, 2, length.out = size))
+mu = 2 + seq(0, 5, length.out = size)
 x = rgev(size * 5, loc = 0, scale = 1, shape = 0)
 z = rgev(size, loc = mu, scale = 1, shape = 0)
 theta_theo <- 1 / exp(mu)
@@ -69,6 +88,7 @@ with(theta, lines(theta_theo, theta_hat - 1.96 * sigma_theta_hat))
 abline(a = 0, b = 1, col = "red")
 
 theta <- estim_theta.nswexp(x = x, t = t, z = z, kernel = krnl, h = NULL)
+theta$utest_pvalue
 coef(theta)
 vcov(theta)
 theta_ci95 <- confint(theta, level = c(0.95))
@@ -235,4 +255,97 @@ mu_theo <- 2 + exp(tref)
 theta_theo <- 1 / exp(mu_theo)
 p12_theo <- 1 / (1 + theta_theo)
 p12var_theo <- 1/(size * h) * p12_theo * (1 - p12_theo) * attr(kernel_gauss,"K2_integrated")
+
+# non-stationnary exponential test
+x_h0 <- rgev(length(x), loc = 0, scale = 1, shape = 0)
+z_h0 <- rgev(length(z), loc = -log(theta_theo), scale = 1, shape = 0)
+W_h0 <- -log(ecdf(x_h0)(z_h0))/theta_theo
+W <- -log(ecdf(x)(z))/theta_theo
+
+hist(rexp(length(z)), breaks = 100)
+hist(W_h0, breaks = 100)
+hist(W, breaks = 100)
+qqplot(W_h0, W)
+ks.test(W_h0, W)
+Matching::ks.boot(W_h0, W, nboots = 10000)
+ks.test(W, "dexp")
+
+##############################################################################
+#########################################################################
+# Example 1
+# Gumbel
+# Simulations
+size <-  250 * 4
+rp <- 50
+t <- seq.int(size)/size
+mu = 2 + exp(-seq(0, 2, length.out = size))
+mu = 2 + seq(0, 5, length.out = size)
+x = rgev(size * 5, loc = 0, scale = 1, shape = 0)
+z = rgev(size, loc = mu, scale = 1, shape = 0)
+theta_theo <- 1 / exp(mu)
+p12_theo <- 1 / (1 + theta_theo)
+G_theo <- function(z) pgev(z, loc = 0, scale = 1, shape = 0)
+far_theo_rp <- (1 - theta_theo) * (1 - 1/rp)
+
+# Example 2
+# Frechet
+# Simulations
+size <-  250 * 4
+rp <- 50
+t <- seq.int(size)/size
+sigma <- seq(1, 2, length.out = size)
+xi = 0.5
+x = rgev(size * 5, loc = 1, scale = xi, shape = xi)
+z = rgev(size, loc = sigma, scale = xi * sigma, shape = xi)
+theta_theo <- sigma^(-1 / xi)
+p12_theo <- 1 / (1 + theta_theo)
+G_theo <- function(z) pgev(z, loc = 1, scale = xi, shape = xi)
+far_theo_rp <- (1 - theta_theo) * (1 - 1/rp)
+
+
+
+
+kstest_betatrunc(x, z)
+
+ks.test(GZhat, pbeta, 1/theta_theo, 1)
+ks.test(GZhat_trunc, pbeta, 1/theta_theo, 1)
+W <- estim_W(GZhat)
+W_normalized <- normalize_W(W, theta_theo)
+dist_ks <- ks.test(W_normalized, "pexp", rate = 1)$statistic
+dist_ks_h0 <- sapply(1:1000, function(i) gen_h0(x, z, theta_theo))
+hist(dist_ks_h0, breaks = 50)
+abline(v = dist_ks)
+pvalue <- mean(dist_ks < dist_ks_h0)
+
+
+
+
+check_pvalues <- function(){
+  size <-  250 * 4
+  t <- seq.int(size)/size
+  mu = 2 + seq(0, 5, length.out = size)
+  x = rgev(size * 5, loc = 0, scale = 1, shape = 0)
+  z = rgev(size, loc = mu, scale = 1, shape = 0)
+  theta_theo <- 1 / exp(mu)
+  compute_exptest_pvalue(x, z, theta, n_h0 = 200)
+}
+
+pvalues <- sapply(1:200, function(i) check_pvalues())
+hist(pvalues)
+ks.test(pvalues, punif)
+
+qqplot(W_h0_normalized, W_normalized)
+qqplot(GZhat, GZhat_h0)
+ks.test(W_h0_normalized, W_normalized)
+ks.test(GZhat, GZhat_h0)
+Matching::ks.boot(W_h0_normalized, W_normalized)
+ks.test(W_h0_normalized, "pexp", rate = 1)
+ks.test(W_normalized, "pexp", rate = 1)
+hist(W_normalized, breaks = 100, freq = FALSE)
+lines(seq(0,10, 0.01), dexp(seq(0, 10, 0.01)))
+hist(W_h0_normalized, breaks = 100, freq = FALSE)
+lines(seq(0,10, 0.01), dexp(seq(0, 10, 0.01)))
+
+hist(Gd, breaks = 100, freq = FALSE)
+lines(seq(0,10, 0.01), dexp(seq(0, 10, 0.01)))
 
