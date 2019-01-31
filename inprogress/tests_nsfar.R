@@ -4,7 +4,7 @@ library(magrittr)
 library(devtools)
 library(truncdist)
 devtools::load_all()
-source("tests/tests_nsfar_algo.R")
+source("inprogress/tests_nsfar_algo.R")
 # RNG
 set.seed(1)
 
@@ -305,47 +305,47 @@ far_theo_rp <- (1 - theta_theo) * (1 - 1/rp)
 
 
 
-kstest_betatrunc(x, z)
-
-ks.test(GZhat, pbeta, 1/theta_theo, 1)
-ks.test(GZhat_trunc, pbeta, 1/theta_theo, 1)
-W <- estim_W(GZhat)
-W_normalized <- normalize_W(W, theta_theo)
-dist_ks <- ks.test(W_normalized, "pexp", rate = 1)$statistic
-dist_ks_h0 <- sapply(1:1000, function(i) gen_h0(x, z, theta_theo))
-hist(dist_ks_h0, breaks = 50)
-abline(v = dist_ks)
-pvalue <- mean(dist_ks < dist_ks_h0)
-
-
-
-
-check_pvalues <- function(){
-  size <-  250 * 4
-  t <- seq.int(size)/size
-  mu = 2 + seq(0, 5, length.out = size)
-  x = rgev(size * 5, loc = 0, scale = 1, shape = 0)
-  z = rgev(size, loc = mu, scale = 1, shape = 0)
-  theta_theo <- 1 / exp(mu)
-  compute_exptest_pvalue(x, z, theta, n_h0 = 200)
-}
-
-pvalues <- sapply(1:200, function(i) check_pvalues())
-hist(pvalues)
-ks.test(pvalues, punif)
-
-qqplot(W_h0_normalized, W_normalized)
-qqplot(GZhat, GZhat_h0)
-ks.test(W_h0_normalized, W_normalized)
-ks.test(GZhat, GZhat_h0)
-Matching::ks.boot(W_h0_normalized, W_normalized)
-ks.test(W_h0_normalized, "pexp", rate = 1)
-ks.test(W_normalized, "pexp", rate = 1)
-hist(W_normalized, breaks = 100, freq = FALSE)
-lines(seq(0,10, 0.01), dexp(seq(0, 10, 0.01)))
-hist(W_h0_normalized, breaks = 100, freq = FALSE)
-lines(seq(0,10, 0.01), dexp(seq(0, 10, 0.01)))
-
-hist(Gd, breaks = 100, freq = FALSE)
-lines(seq(0,10, 0.01), dexp(seq(0, 10, 0.01)))
-
+# kstest_betatrunc(x, z)
+#
+# ks.test(GZhat, pbeta, 1/theta_theo, 1)
+# ks.test(GZhat_trunc, pbeta, 1/theta_theo, 1)
+# W <- estim_W(GZhat)
+# W_normalized <- normalize_W(W, theta_theo)
+# dist_ks <- ks.test(W_normalized, "pexp", rate = 1)$statistic
+# dist_ks_h0 <- sapply(1:1000, function(i) gen_h0(x, z, theta_theo))
+# hist(dist_ks_h0, breaks = 50)
+# abline(v = dist_ks)
+# pvalue <- mean(dist_ks < dist_ks_h0)
+#
+#
+#
+#
+# check_pvalues <- function(){
+#   size <-  250 * 4
+#   t <- seq.int(size)/size
+#   mu = 2 + seq(0, 5, length.out = size)
+#   x = rgev(size * 5, loc = 0, scale = 1, shape = 0)
+#   z = rgev(size, loc = mu, scale = 1, shape = 0)
+#   theta_theo <- 1 / exp(mu)
+#   compute_exptest_pvalue(x, z, theta, n_h0 = 200)
+# }
+#
+# pvalues <- sapply(1:200, function(i) check_pvalues())
+# hist(pvalues)
+# ks.test(pvalues, punif)
+#
+# qqplot(W_h0_normalized, W_normalized)
+# qqplot(GZhat, GZhat_h0)
+# ks.test(W_h0_normalized, W_normalized)
+# ks.test(GZhat, GZhat_h0)
+# Matching::ks.boot(W_h0_normalized, W_normalized)
+# ks.test(W_h0_normalized, "pexp", rate = 1)
+# ks.test(W_normalized, "pexp", rate = 1)
+# hist(W_normalized, breaks = 100, freq = FALSE)
+# lines(seq(0,10, 0.01), dexp(seq(0, 10, 0.01)))
+# hist(W_h0_normalized, breaks = 100, freq = FALSE)
+# lines(seq(0,10, 0.01), dexp(seq(0, 10, 0.01)))
+#
+# hist(Gd, breaks = 100, freq = FALSE)
+# lines(seq(0,10, 0.01), dexp(seq(0, 10, 0.01)))
+#

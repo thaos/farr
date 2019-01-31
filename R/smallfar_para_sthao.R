@@ -1,7 +1,7 @@
 #' @import np
 #' @importFrom grDevices rgb
 #' @importFrom graphics abline box grid hist lines plot points polygon
-#' @importFrom stats confint dexp pexp pnorm qexp quantile sd
+#' @importFrom stats confint dexp pexp pnorm qexp quantile sd coef vcov
 
 estim_GZ.empirical <- function(x, z){
   GZhat <- ecdf(x)(z)
@@ -165,12 +165,14 @@ estim_theta.wexp <- function(x, z){
   return(theta_fit)
 }
 
+
 #' @export
 coef.thetafit_wexp <- function(object, ...){
   coef <- object$theta_hat
   names(coef) <- "theta"
   return(coef)
 }
+
 
 #' @export
 vcov.thetafit_wexp <- function(object, ...){
