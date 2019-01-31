@@ -140,7 +140,7 @@ hist.thetafitns_wexp <- function(x, ...){
        breaks = max(9, length(GmZ_normalized)/10),
        col = "lightgray"
   )
-  grid(lwd = 3)
+  # grid(lwd = 3)
   box()
   xx <- seq(from = 0, to = max(GmZ_normalized), length = 200)
   lines(xx, dunif(xx, min = 0, max = 1), col = "darkblue", lwd = 3, lty = 2)
@@ -171,9 +171,9 @@ qqplot.thetafitns_wexp <- function(x, ...){
   plot(observed, expected,
        xlim = xylim, ylim = xylim,
        xlab = "Observed", ylab = "Expected",
-       main = "Uniform QQ plot for  GmZ_normalized=Gm(Z)^(1/theta)",
+       main = "Uniform QQ plot for \n GmZ_normalized=Gm(Z)^(1/theta)",
        col = "darkblue", pch = 20, cex = 1)
-  grid(lwd = 3)
+  # grid(lwd = 3)
   box()
   polygon(
     c(observed_inf, observed_sup[ll:1]),
@@ -197,7 +197,7 @@ ecdf.thetafitns_wexp <- function(x, ...){
        xlab = "GmZ_normalized=Gm(Z)^(1/theta)",
        ylab = "",
        main = "Theoretical and Empirical CDFs", ...)
-  grid(lwd = 3);box()
+  # grid(lwd = 3);box()
   xx <- seq(from = 0 , to = xlim[2], length = 200)
   lines(xx, punif(xx, min = 0, max = 1), col = "darkgray", lwd = 4, lty = 2)
 }
@@ -443,7 +443,7 @@ plot.farrfitns_wexp <- function(x, plot_ci = TRUE, ...){
                   nrow = length(t_unique),
                   ncol = length(rp),
                   byrow = TRUE)
-  rp_col <- cut(rp, breaks = seq(min(rp)-0.1, max(rp + .1), length.out = length(rp) + 1))
+  rp_col <- cut(rp, breaks = seq(min(rp) - 0.1, max(rp + .1), length.out = length(rp) + 1))
   ciband_byrp <- function(irp){
     x <- c(t_unique, rev(t_unique))
     y <- c(farr_ci_ordered[, irp, 1],
@@ -466,7 +466,7 @@ plot.farrfitns_wexp <- function(x, plot_ci = TRUE, ...){
           sub = paste("rp =", rp[irp], ", CI level =", ellipsis$level))
     ciband_byrp(irp)
     farr_points <- (1 - (1/get_GmZ(x) - 1)) * (1 - 1/rp[irp])
-    # points(tmat[, irp], farr_points)
+    points(tmat[, irp], farr_points)
     grid()
   }
   compute_nrowncol <- function(rp){
@@ -729,12 +729,12 @@ compute_exptest_pvalue <- function(x, z, theta, n_h0 = 100){
 
 ## Tests that G(Z)^1/theta ~ Beta(1, 1) = U[0, 1]
 ## Equivalent to testing that -log(G(Z))/theta ~ Exp(1)
-ptrunc_beta <- function(q, shape1, shape2, ncp = 0, lower.tail = TRUE, log.p = FALSE){
+ptrunc_beta <- function(q, shape1, shape2, a, b, ncp = 0, lower.tail = TRUE, log.p = FALSE){
   ptrunc(q, spec = "beta", a = 0, b = 1,
          shape1 = shape1, shape2 = shape2,
          ncp = ncp, lower.tail = lower.tail, log.p = log.p)
 }
-dtrunc_beta <- function(x, shape1, shape2, ncp = 0, log = FALSE){
+dtrunc_beta <- function(x, shape1, shape2, a, b, ncp = 0, log = FALSE){
   dtrunc(x, spec = "beta", a = 0, b = 1,
          shape1 = shape1, shape2 = shape2,
          ncp = ncp, log = log)
@@ -747,6 +747,16 @@ kstest_unif <- function(x, z, theta){
   # hist(GZhat_trunc^(1/theta_theo_trunc), freq = FALSE, breaks = 50)
   # xx <- seq(0, 1, 0.01)
   # lines(xx, dtrunc_beta(xx, shape1 = 1, shape2 = 1))
-  ks.test(GZhat_trunc^(1/theta_trunc),"ptrunc_beta", 1, 1)
-  # ks.test(GZhat_trunc^(1/theta_trunc),"punif")
+  GZhat_normalized <- GZhat_trunc^(1/theta_trunc)
+  # ks.test(
+  #   GZhat_trunc^(1/theta_trunc),"ptrunc_beta",
+  #   shape1 = 1, shape2 = 1,
+  #   a = min(GZhat_normalized),
+  #   b = max(GZhat_normalized)
+  # )
+  ks.test(
+    GZhat_normalized, "punif",
+    min = min(GZhat_normalized),
+    max = max(GZhat_normalized)
+  )
 }

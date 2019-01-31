@@ -328,6 +328,8 @@ plot.farrfit <-function(x, ...){
   # quantile for two side 90 confidence interval
   #
   ci90 <- confint(x, names(farr), level = 0.90)
+  ina <- apply(ci90, 1, function(x) any(is.na(x)))
+  ci90_nna <- ci90[!ina, ]
   ellipsis <- list(...)
   if(is.null(ellipsis$ylim)){
     ymin <- min(farr,  ci90, na.rm = TRUE)
@@ -353,8 +355,11 @@ plot.farrfit <-function(x, ...){
   args_plot <- c(args_plot, ellipsis)
   do.call(plot, args_plot)
   grid(lwd = 3)
-  args_polygon <- list(x = c(rp, rp[lr:1]),
-                       y = c(ci90[, 1], ci90[lr:1, 2]),
+  #   args_polygon <- list(x = c(rp[!ina], rev(rp[!ina])),
+  #                        y = c(ci90_nna[, 1], rev(ci90_nna[, 2])),
+  #                        col = col, border=F)
+  args_polygon <- list(x = c(rp, rev(rp)),
+                       y = c(ci90[, 1], rev(ci90[, 2])),
                        col = col, border=F)
   args_polygon <- c(args_polygon, ellipsis)
   do.call(polygon, args_polygon)
@@ -376,14 +381,15 @@ hist.thetafit_wexp <- function(x, ...){
   hist(W,
        freq = F,
        xlab = "W = -log(G(Z))",
-       xlim = c(0, max(W_normalized)),
+       xlim = c(0, max(W)),
        main = "Exponential fit for W",
        breaks = max(9, length(W)/10),
-       col="lightgray"
+       col="lightgray",
+       ...
   )
-  grid(lwd = 3)
+  # grid(lwd = 3)
   box()
-  xx <- seq(from = 0, to = max(W_normalized), length=200)
+  xx <- seq(from = 0, to = max(W), length=200)
   lines(xx, dexp(xx, rate = 1/x$theta_hat), col="darkblue", lwd=3, lty=2)
 }
 
@@ -419,8 +425,9 @@ qqplot.thetafit_wexp <- function(x, ...){
        xlim = xylim, ylim = xylim,
        xlab = "Observed", ylab = "Expected",
        main = "Exponential QQ plot for  W=-log(G(Z))",
-       col="darkblue", pch = 20, cex = 1)
-  grid(lwd = 3)
+       col="darkblue", pch = 20, cex = 1,
+       ...)
+  # grid(lwd = 3)
   box()
   polygon(c(observed, observed[ll:1]), c(expected95, expected05[ll:1]), col = rgb(red=0,green=.0,blue=.5,alpha=.3), border=F)
   abline(a=0, b=1 , col="red", lwd=3)
@@ -448,7 +455,7 @@ ecdf.thetafit_wexp <- function(x, ...){
   xlab = "W = -log(G(Z))",
   ylab = "",
   main = "Theoretical and Empirical CDFs", ...)
-  grid(lwd = 3);box()
+  # grid(lwd = 3);box()
   xx <- seq(from=0 , to=max(W), length=200)
   lines(xx, pexp(xx, rate = 1 / x$theta_hat), col = "darkgray", lwd = 4, lty = 2)
 }
