@@ -516,7 +516,7 @@ boot_p12 <- function(x, t, z, kernel = kernel_epanechnikov, h = length(t)^(-1/5)
       dist(method = "euclidian") %>%
       as.matrix()
     dmat <- dmat[1:n, (n+1):(2*n)]
-    kmat <- apply(dmat, 2, kernel_gauss, h = h)
+    kmat <- apply(dmat, 2, kernel, h = h)
     Gm <- ecdf(x)
     GmZ <- Gm(z)
     p12 <- apply(kmat, 2, function(weight){
