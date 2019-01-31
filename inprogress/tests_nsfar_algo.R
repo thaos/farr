@@ -550,23 +550,55 @@ boot_farr <- function(theta_boot, rp) {
   (1 - theta_boot) * (1 - 1/rp)
 }
 
-boot_farr_fit.nswexp <- function(object , rp){
-  farr_boot <- vapply(rp,
-                      FUN = function(rpi){
-                        boot_farr(rp = rpi, theta_boot = object$theta_boot)
-                      },
-                      FUN.VALUE = object$theta_boot)
-  farr_boot <- aperm(farr_boot, c(1, 3, 2))
-  dimnames(farr_boot) <- list(t = object$tboot[[1]],
-                              rp = rp,
-                              B = seq.int(length(object$tboot)))
-  farr_res <- c(list(farr_boot = farr_boot, rp = rp), object)
-  class(farr_res) <- c("boot_farrfitns_wexp", "farrfitns_wexp")
-  return(farr_res)
+boot_p1r <- function(theta_boot, rp){
+  if(length(rp) != 1) stop("length != 1")
+  1 / (1 + (rp - 1) * theta_boot)
 }
 
+create_boot_stat_fit.nswexp <- function(stat_name, boot_stat){
+  boot_farr_fit.nswexp <- function(object , rp){
+    stat_boot <- vapply(rp,
+                        FUN = function(rpi){
+                          boot_stat(rp = rpi, theta_boot = object$theta_boot)
+                        },
+                        FUN.VALUE = object$theta_boot)
+    stat_boot <- aperm(stat_boot, c(1, 3, 2))
+    dimnames(stat_boot) <- list(t = object$tboot[[1]],
+                                rp = rp,
+                                B = seq.int(length(object$tboot)))
+    stat_res <- list(stat_boot = stat_boot, rp = rp)
+    names(stat_res) <- c(
+      paste(stat_name, "_boot", sep = ""),
+      "rp"
+    )
+    stat_res <- c(stat_res, object)
+    class(stat_res) <- c(
+      paste("boot_", stat_name, "fitns_wexp", sep = ""),
+      paste(stat_name, "fitns_wexp", sep = "")
+    )
+    return(stat_res)
+  }
+}
+boot_farr_fit.nswexp <- create_boot_stat_fit.nswexp(stat_name = "farr", boot_stat = boot_farr)
+boot_p1r_fit.nswexp <- create_boot_stat_fit.nswexp(stat_name = "p1r", boot_stat = boot_p1r)
+
+# boot_farr_fit.nswexp <- function(object , rp){
+#   farr_boot <- vapply(rp,
+#                       FUN = function(rpi){
+#                         boot_farr(rp = rpi, theta_boot = object$theta_boot)
+#                       },
+#                       FUN.VALUE = object$theta_boot)
+#   farr_boot <- aperm(farr_boot, c(1, 3, 2))
+#   dimnames(farr_boot) <- list(t = object$tboot[[1]],
+#                               rp = rp,
+#                               B = seq.int(length(object$tboot)))
+#   farr_res <- c(list(farr_boot = farr_boot, rp = rp), object)
+#   class(farr_res) <- c("boot_farrfitns_wexp", "farrfitns_wexp")
+#   return(farr_res)
+# }
+
 confint.boot_farrfitns_wexp <- function(object, parm, level = 0.95, ...){
-  alpha <- (1 - level) /2
+  alpha <- (1 - level) / 2
   farr_boot <- object$farr_boot
   if(!missing(parm)){
     irp <- seq_along(object$rp)
