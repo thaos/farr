@@ -18,7 +18,7 @@ rp <- 50
 t <- seq.int(size)/size
 sigma <- seq(1, 2, length.out = size)
 xi = 0.5
-x = rgev(size * 5, loc = 1, scale = xi, shape = xi)
+x = rgev(size * 1/4, loc = 1, scale = xi, shape = xi)
 z = rgev(size, loc = sigma, scale = xi * sigma, shape = xi)
 theta_theo <- sigma^(-1 / xi)
 p12_theo <- 1 / (1 + theta_theo)
@@ -50,9 +50,9 @@ krnl <- kernel_epanechnikov
 
 p12 <- estim_p12_ns(x = x, t = t, z = z, kernel = krnl, h = length(t)^(-1/5)/5)
 with(p12, plot(t, GmZ, pch = 20, col = "lightgrey"))
-with(p12, lines(t, p12_hat, lty = 2))
-with(p12, lines(t, p12_hat + 1.96 * sigma_p12_hat))
-with(p12, lines(t, p12_hat - 1.96 * sigma_p12_hat))
+with(p12, lines(t_unique, p12_hat, lty = 2))
+with(p12, lines(t_unique, p12_hat + 1.96 * sigma_p12_hat))
+with(p12, lines(t_unique, p12_hat - 1.96 * sigma_p12_hat))
 lines(t, p12_theo, col = "red")
 
 xylim <- with(p12,
@@ -70,9 +70,9 @@ abline(a = 0, b = 1, col = "red")
 
 theta <- with(p12, estim_theta_ns(p12_hat = p12_hat, sigma_p12_hat = sigma_p12_hat))
 with(theta, plot(t, 1/p12$GmZ - 1))
-with(theta, lines(t, theta_hat, lty = 2))
-with(theta, lines(t, theta_hat + 1.96 * sigma_theta_hat))
-with(theta, lines(t, theta_hat - 1.96 * sigma_theta_hat))
+with(theta, lines(t_unique, theta_hat, lty = 2))
+with(theta, lines(t_unique, theta_hat + 1.96 * sigma_theta_hat))
+with(theta, lines(t_unique, theta_hat - 1.96 * sigma_theta_hat))
 lines(t, theta_theo, col = "red")
 
 xylim <- with(theta,
@@ -104,9 +104,9 @@ far_rp <- with(theta, estim_farr_ns(theta_hat = theta_hat,
                                 rp = rp))
 with(theta, plot(t, (1 - (1/p12$GmZ - 1)) * (1 - 1/rp),
                  pch = 20, col = "lightgrey"))
-lines(t, far_rp[, 1], lty = 2)
-lines(t, far_rp[, 1] + 1.96 * far_rp[, 2])
-lines(t, far_rp[, 1] - 1.96 * far_rp[, 2])
+lines(theta$t_unique, far_rp[, 1], lty = 2)
+lines(theta$t_unique, far_rp[, 1] + 1.96 * far_rp[, 2])
+lines(theta$t_unique, far_rp[, 1] - 1.96 * far_rp[, 2])
 lines(t, far_theo_rp, col = "red")
 
 xylim <- range(far_theo_rp, far_rp[, 1] + 1.96 * far_rp[, 2], far_rp[, 1] - 1.96 * far_rp[, 2])
@@ -167,9 +167,9 @@ hchosen <- choose_h_for_wexp(x = x, t = t, z = z,
                   kernel = krnl)$minimum
 p12 <- estim_p12_ns(x = x, t = t, z = z, kernel = krnl, h = hchosen)
 with(p12, plot(t, GmZ, pch = 20, col = "lightgrey"))
-with(p12, lines(t, p12_hat, lty = 2))
-with(p12, lines(t, p12_hat + 1.96 * sigma_p12_hat))
-with(p12, lines(t, p12_hat - 1.96 * sigma_p12_hat))
+with(p12, lines(t_unique, p12_hat, lty = 2))
+with(p12, lines(t_unique, p12_hat + 1.96 * sigma_p12_hat))
+with(p12, lines(t_unique, p12_hat - 1.96 * sigma_p12_hat))
 lines(t, p12_theo, col = "red")
 
 htotest <- seq(.Machine$double.eps, max(t)/3, by = length(t)^(-1/5)/30)[-1]
@@ -184,18 +184,18 @@ hchosen <- htotest[which.min(cv)]
 
 p12 <- estim_p12_ns(x = x, t = t, z = z, kernel = krnl, h = hchosen)
 with(p12, plot(t, GmZ, pch = 20, col = "lightgrey"))
-with(p12, lines(t, p12_hat, lty = 2))
-with(p12, lines(t, p12_hat + 1.96 * sigma_p12_hat))
-with(p12, lines(t, p12_hat - 1.96 * sigma_p12_hat))
+with(p12, lines(t_unique, p12_hat, lty = 2))
+with(p12, lines(t_unique, p12_hat + 1.96 * sigma_p12_hat))
+with(p12, lines(t_unique, p12_hat - 1.96 * sigma_p12_hat))
 lines(t, p12_theo, col = "red")
 
 p12boot <- boot_p12(x = x, t = t, z = z,
                     kernel = krnl, h = hchosen,
                     B = 100)
 plot(t, p12$GmZ, pch = 20, col = "lightgrey")
-lines(t, apply(p12boot$p12_boot, 1, mean), lwd = 1, lty = 2)
-lines(t, apply(p12boot$p12_boot, 1, quantile, probs = 0.975), lwd = 1, lty = 1)
-lines(t, apply(p12boot$p12_boot, 1, quantile, probs = 0.025), lwd = 1, lty = 1)
+lines(p12$t_unique, apply(p12boot$p12_boot, 1, mean), lwd = 1, lty = 2)
+lines(p12$t_unique, apply(p12boot$p12_boot, 1, quantile, probs = 0.975), lwd = 1, lty = 1)
+lines(p12$t_unique, apply(p12boot$p12_boot, 1, quantile, probs = 0.025), lwd = 1, lty = 1)
 lines(t, p12_theo, col = "red", lwd = 1)
 
 thetaboot <- boot_theta(p12_boot = p12boot$p12_boot)

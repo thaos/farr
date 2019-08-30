@@ -11,50 +11,62 @@ kernel_epanechnikov <- function(x, h = 1){
 }
 attr(kernel_epanechnikov, "K2_integrated") <-  3/5
 
-estim_p12_ns <- function(x, t, z, kernel, h = length(t)^(-1/5)){
+estim_p12_ns <- function(x, t, z, tpred = sort(unique(t)), kernel, h = length(t)^(-1/5)){
   n <- length(t)
   m <- length(x)
-  t_unique <- sort(unique(t))
-  dmat <- t %>% matrix(ncol = 1) %>%
-    dist(method = "euclidian") %>%
-    as.matrix()
-  kmat <- apply(dmat, 2, kernel_gauss, h = h)
   Gm <- ecdf(x)
   GmZ <- Gm(z)
-  p12 <- apply(kmat, 2, function(weight){
-    weighted.mean(GmZ, weight)
+  p12 <- sapply(tpred, function(ti){
+    dvect <- abs(ti - t)
+    kvect <- kernel(dvect, h = h)
+    weighted.mean(GmZ, kvect)
   })
-  sig2 <- apply(kmat, 2, function(weight){
-    weighted.mean((p12 - GmZ)^2, weight)
+  p12t <- p12[match(t, table = tpred)]
+  sig2 <- sapply(tpred, function(ti){
+    dvect <- abs(ti - t)
+    kvect <- kernel(dvect, h = h)
+    weighted.mean((p12t - GmZ)^2, kvect)
   })
-  if( !is.null(attr(kernel, "K2_integrated"))){
+  if( !is.null(attr(kernel, "K2_integrated" ))) {
     K22 <- attr(kernel, "K2_integrated")
   } else{
     K22 <- integrate(function(x) kernel(x)^2, lower = -Inf, upper = Inf)$value
   }
-  ft <- apply(kmat, 2, mean)
+  ft <- sapply(tpred, function(ti){
+    dvect <- abs(ti - t)
+    kvect <- kernel(dvect, h = h)
+    mean(kvect)
+  })
   p12_var <- 1/(n * h) * sig2/ft * K22
   # p12_var <-  p12_var + 1/(n * m * h) * p12 * (1 - p12)
   ## Part of Brownian Bridge
-  # minGmZ <-  outer(GmZ, GmZ, pmin)
-  # prodGmZ <- outer(GmZ, GmZ, "*")
-  # BGmZ_var <- apply(kmat, 2, function(Kj){
-  #   prodKj <- outer(Kj, Kj, "*")
-  #   sum(prodKj * (minGmZ - prodGmZ))
-  # })
-  # BGmZ_var <- BGmZ_var/ ft^2 /(m * n^2)
-  # BGmZ_var <- BGmZ_var/ (m * n^2)
-  # p12_var <- p12_var + BGmZ_var
-  list(p12_hat = p12, sigma_p12_hat = sqrt(p12_var), GmZ = GmZ)
+  minGmZ <-  outer(GmZ, GmZ, pmin)
+  prodGmZ <- outer(GmZ, GmZ, "*")
+  BGmZ_var <- sapply(tpred, function(ti){
+    dvect <- abs(ti - t)
+    kvect <- kernel(dvect, h = h)
+    prodKj <- outer(kvect/sum(kvect), kvect/sum(kvect), "*")
+    sum(prodKj * (minGmZ - prodGmZ))
+  })
+  p12_var <- p12_var + BGmZ_var / m
+  list(
+    tpred = tpred,
+    p12_hat = p12,
+    sigma_p12_hat = sqrt(p12_var),
+    GmZ = GmZ
+  )
 }
 
 estim_theta_ns <- function(p12_hat, sigma_p12_hat) {
   theta_hat <- 1/p12_hat - 1
   var_theta_hat <- sigma_p12_hat^2 / p12_hat^4
-  list(theta_hat = theta_hat, sigma_theta_hat = sqrt(var_theta_hat))
+  list(
+    theta_hat = theta_hat,
+    sigma_theta_hat = sqrt(var_theta_hat)
+  )
 }
 
-estim_theta.nswexp <- function(x, t, z, kernel, h = NULL){
+estim_theta.nswexp <- function(x, t, z, tpred = sort(unique(t)), kernel, h = NULL){
   #
   #  x (counterfactual), z (factual), rp = return periods
 
@@ -71,11 +83,10 @@ estim_theta.nswexp <- function(x, t, z, kernel, h = NULL){
     #               ),
     #               x = x, t = t, z = z,
     #               kernel = kernel)$minimum
-    t_sorted <- sort(unique(t))
     h_totest <- seq(
-      min(diff(t_sorted)),
+      min(diff(tpred)),
       abs(diff(range(t))) / 4,
-      by = median(diff(t_sorted))
+      by = median(diff(tpred))
     )
     cv_score <- sapply(
       h_totest,
@@ -84,7 +95,7 @@ estim_theta.nswexp <- function(x, t, z, kernel, h = NULL){
     h <- h_totest[which.min(cv_score)]
     # h <- choose_h_for_wexp(x = x, t = t, z = z, kernel = kernel)$minimum
   }
-  p12 <- estim_p12_ns(x = x, t = t, z = z, kernel = kernel, h = h)
+  p12 <- estim_p12_ns(x = x, t = t, z = z, tpred = tpred, kernel = kernel, h = h)
   theta <- estim_theta_ns(p12_hat = p12$p12_hat, sigma_p12_hat = p12$sigma_p12_hat)
 
   # Creating W = - log(Ghat(Z)) with Ghat(Z)= average(K(Z-X_i)) for the kernel based on the arctan
@@ -95,14 +106,22 @@ estim_theta.nswexp <- function(x, t, z, kernel, h = NULL){
   # W_normalized <- replace_zeros(W_normalized)
   # Cox and Oakes Test for the exponential distribution
   # co_test <- farr::CoxOakes(x = W_normalized)
-  utest <- kstest_unif(x = x, z = z, theta = theta$theta_hat)
-  names(theta$theta_hat) <- paste("theta_t", t, sep = "_")
-  theta_fit <- list(x = x, t = t, z = z,
-                    theta_hat = theta$theta_hat,
-                    sigma_theta_hat = theta$sigma_theta_hat,
-                    GmZ = p12$GmZ,
-                    utest_pvalue = utest$p.value,
-                    kernel = kernel, h = h)
+  theta_with_duplicate <- merge(
+    data.frame(t = t, z = z),
+    data.frame(t = p12$tpred, theta_hat = theta$theta_hat),
+    by = "t"
+  )
+  utest <- kstest_unif(x = x, z = theta_with_duplicate$z, theta = theta_with_duplicate$theta_hat)
+  names(theta$theta_hat) <- paste("theta_t", p12$t_unique, sep = "_")
+  theta_fit <- list(
+    x = x, t = t, z = z,
+    tpred = p12$tpred,
+    theta_hat = theta$theta_hat,
+    sigma_theta_hat = theta$sigma_theta_hat,
+    GmZ = p12$GmZ,
+    utest_pvalue = utest$p.value,
+    kernel = kernel, h = h
+  )
   class(theta_fit) <- c("thetafitns_wexp")
   return(theta_fit)
 }
@@ -128,10 +147,13 @@ hist.thetafitns_wexp <- function(x, ...){
   # Checking (histogram) if -log(G(Z)) follows an exponentialdistribution
   #
   GmZ <- x$GmZ
-  theta <- x$theta_hat
-  GmZ_trunc <- GmZ[!(GmZ <= 0 | GmZ >= 1)]
-  theta_trunc <- theta[!(GmZ <= 0 | GmZ >= 1)]
-  GmZ_normalized <- GmZ_trunc^(1/theta_trunc)
+  theta_df <- merge(
+    data.frame(t = x$t, GmZ = x$GmZ),
+    data.frame(t = x$tpred, theta_hat = x$theta_hat),
+    by = "t"
+  )
+  theta_df <- theta_df[!(theta_df$GmZ <= 0 | theta_df$GmZ >= 1), ]
+  GmZ_normalized <- theta_df$GmZ^(1/theta_df$theta_hat)
   hist(GmZ_normalized,
        freq = F,
        xlab = "Gm(Z)^(1/theta)",
@@ -151,13 +173,16 @@ qqplot.thetafitns_wexp <- function(x, ...){
   # Checking (qqplot) if -log(G(Z)) follows an exponentialdistribution
   #
   GmZ <- x$GmZ
-  theta <- x$theta_hat
-  GmZ_trunc <- GmZ[!(GmZ <= 0 | GmZ >= 1)]
-  theta_trunc <- theta[!(GmZ <= 0 | GmZ >= 1)]
-  GmZ_normalized <- GmZ_trunc^(1/theta_trunc)
-  ci90 <- confint(x)[!(GmZ <= 0 | GmZ >= 1), ]
-  GmZ_normalized_inf <- GmZ_trunc^(1/ci90[, 1])
-  GmZ_normalized_sup <- GmZ_trunc^(1/ci90[, 2])
+  ci95 <- confint(x)
+  ci95 <- merge(
+    data.frame(t = x$t, GmZ = x$GmZ),
+    data.frame(t = x$tpred, theta_hat = x$theta_hat, q025 = ci95[, 1], q975 = ci95[, 2]),
+    by = "t"
+  )
+  ci95 <- ci95[!(ci95$GmZ <= 0 | ci95$GmZ >= 1), ]
+  GmZ_normalized <- ci95$GmZ^(1/ci95$theta_hat)
+  GmZ_normalized_inf <- ci95$GmZ^(1/ci95$q025)
+  GmZ_normalized_sup <- ci95$GmZ^(1/ci95$q975)
   ll <- length(GmZ_normalized)
   pp <- ((1:ll) - 0.5) / ll
   expected <- qunif(pp, min = 0, max = 1)
@@ -187,10 +212,13 @@ qqplot.thetafitns_wexp <- function(x, ...){
 
 ecdf.thetafitns_wexp <- function(x, ...){
   GmZ <- x$GmZ
-  theta <- x$theta_hat
-  GmZ_trunc <- GmZ[!(GmZ <= 0 | GmZ >= 1)]
-  theta_trunc <- theta[!(GmZ <= 0 | GmZ >= 1)]
-  GmZ_normalized <- GmZ_trunc^(1/theta_trunc)
+  theta_df <- merge(
+    data.frame(t = x$t, GmZ = x$GmZ),
+    data.frame(t = x$tpred, theta_hat = x$theta_hat),
+    by = "t"
+  )
+  theta_df <- theta_df[!(theta_df$GmZ <= 0 | theta_df$GmZ >= 1), ]
+  GmZ_normalized <- theta_df$GmZ^(1/theta_df$theta_hat)
   xlim <- range(GmZ_normalized)
   plot(ecdf(GmZ_normalized),
        xlim = xlim,
@@ -203,7 +231,7 @@ ecdf.thetafitns_wexp <- function(x, ...){
 }
 
 plot.thetafitns_wexp <- function(x, ...){
-  order_t <- order(x$t)
+  order_t <- order(x$tpred)
   t_ordered <- x$t[order_t]
   theta_ordered <- x$theta_hat[order_t]
   theta_ci_ordered <- confint(x)[order_t,]
@@ -502,6 +530,8 @@ boot_p12 <- function(x, t, z, kernel = kernel_epanechnikov, h = length(t)^(-1/5)
   xboot <- lapply(seq.int(B), function(i) sample(x = x, replace = TRUE))
   xboot[[1]] <- x
   n <- length(t)
+  t_unique <- sort(unique(t))
+  n_unique <- length(t_unique)
   itboot <- lapply(seq.int(B), function(i){
     sample.int(n,
                size = n,
@@ -512,10 +542,10 @@ boot_p12 <- function(x, t, z, kernel = kernel_epanechnikov, h = length(t)^(-1/5)
   zboot <- lapply(itboot, function(it) z[it])
   zboot[[1]] <- z
   p12_boot <- mapply(function(x, t, z){
-    dmat <- c(t, tboot[[1]]) %>% matrix(ncol = 1) %>%
+    dmat <- c(t, t_unique) %>% matrix(ncol = 1) %>%
       dist(method = "euclidian") %>%
       as.matrix()
-    dmat <- dmat[1:n, (n+1):(2*n)]
+    dmat <- dmat[1:n, (n+1):(n + n_unique)]
     kmat <- apply(dmat, 2, kernel, h = h)
     Gm <- ecdf(x)
     GmZ <- Gm(z)
@@ -524,7 +554,13 @@ boot_p12 <- function(x, t, z, kernel = kernel_epanechnikov, h = length(t)^(-1/5)
     })
     return(p12)
   }, x = xboot, t = tboot, z = zboot)
-  list(p12_boot = p12_boot, xboot = xboot, tboot = tboot, zboot = zboot)
+  list(
+    t_unique = t_unique,
+    p12_boot = p12_boot,
+    xboot = xboot,
+    tboot = tboot,
+    zboot = zboot
+  )
 }
 
 boot_theta <- function(p12_boot){
@@ -539,10 +575,13 @@ boot_theta_fit.nswexp <- function(x, t, z,
                        kernel = kernel, h = h,
                        B = B)
   theta_boot <- boot_theta(p12_boot$p12_boot)
-  list(theta_boot = theta_boot,
-       xboot = p12_boot$xboot,
-       tboot = p12_boot$tboot,
-       zboot = p12_boot$zboot)
+  list(
+    t_unique= p12_boot$t_unique,
+    theta_boot = theta_boot,
+    xboot = p12_boot$xboot,
+    tboot = p12_boot$tboot,
+    zboot = p12_boot$zboot
+  )
 }
 
 boot_farr <- function(theta_boot, rp) {
@@ -563,7 +602,7 @@ create_boot_stat_fit.nswexp <- function(stat_name, boot_stat){
                         },
                         FUN.VALUE = object$theta_boot)
     stat_boot <- aperm(stat_boot, c(1, 3, 2))
-    dimnames(stat_boot) <- list(t = object$tboot[[1]],
+    dimnames(stat_boot) <- list(t = object$t_unique,
                                 rp = rp,
                                 B = seq.int(length(object$tboot)))
     stat_res <- list(stat_boot = stat_boot, rp = rp)
@@ -666,21 +705,17 @@ choose_h_for_wexp <- function(x = x, t = t, z = z,
 
 cv_loo_h <- function(x = x, t = t, z = z,
                    kernel = kernel_epanechnikov, h = h){
-  dmat <- t %>% matrix(ncol = 1) %>%
-    dist(method = "euclidian") %>%
-    as.matrix()
-  kmat <- apply(dmat, 2, kernel, h = h)
   Gm <- ecdf(x)
   GmZ <- Gm(z)
-  ft <- apply(kmat, 2, mean)
-  p12 <- apply(kmat, 2, function(weight){
-    weighted.mean(GmZ, weight)
-  })
-  sig2 <- apply(kmat, 2, function(weight){
-    weighted.mean((p12 - GmZ)^2, weight)
+  ft <- sapply(t, function(ti){
+    dvect <- abs(ti - t)
+    kvect <- kernel(dvect, h = h)
+    mean(kvect)
   })
   compute_res2_i <- function(i){
-    p12i <- weighted.mean(GmZ[-i], w = kmat[-i, i])
+    dvect <- abs(t[i] - t[-i])
+    kvect <- kernel(dvect, h = h)
+    p12i <- weighted.mean(GmZ[-i], w = kvect)
     e2i <- (GmZ[i] - p12i)^2
     # e2i <- abs(GmZ[i] - p12i)
   }
